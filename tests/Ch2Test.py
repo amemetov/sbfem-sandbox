@@ -21,7 +21,7 @@ class Ch2Test(unittest.TestCase):
         E = 12
         D = E / 2 * np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]])
         mat = sbfem.Material(D, 1)
-        e0, e1, e2, m0 = sbfem.coeffMatricesOf2NodeElement(xy, mat)
+        e0, e1, e2, m0 = sbfem.coeffMatricesOf2NodeLineElement(xy, mat)
 
         npt.assert_array_equal(e0, np.array([[8., 0., 4., 0.],
                                              [0., 4., 0., 2.],

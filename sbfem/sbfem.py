@@ -11,7 +11,7 @@ class Material(object):
         self.den = den
 
 
-def coeffMatricesOf2NodeElement(xy, mat: Material):
+def coeffMatricesOf2NodeLineElement(xy, mat: Material):
     """
     Original name: EleCoeff2NodeEle, p. 64
     Coefficient matrices of a 2-node line element
