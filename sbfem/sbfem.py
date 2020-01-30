@@ -11,6 +11,17 @@ class Material(object):
         self.den = den
 
 
+def elasticityMatrixForPlaneStress(E, p):
+    """
+    Original name: ElasMtrx
+    Computes elasticity matrix (plane stress).
+    :param E: Young's modulus in GPa
+    :param p: Poisson's ratio
+    :return: elsticity matrix
+    """
+    return (E / (1 - p ** 2)) * np.array([[1, p, 0], [p, 1, 0], [0, 0, (1 - p) / 2]])
+
+
 def coeffMatricesOf2NodeLineElement(xy, mat: Material):
     """
     Original name: EleCoeff2NodeEle, p. 64
