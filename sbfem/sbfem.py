@@ -17,24 +17,20 @@ def elasticityMatrixForPlaneStress(E, p):
     Computes elasticity matrix (plane stress).
     :param E: Young's modulus in GPa
     :param p: Poisson's ratio
-    :return: elsticity matrix
+    :return: elasticity matrix
     """
+    # E/(1-pˆ2)*[1 p 0; p 1 0; 0 0 (1-p)/2];
     return (E / (1 - p ** 2)) * np.array([[1, p, 0], [p, 1, 0], [0, 0, (1 - p) / 2]])
 
 
 def coeffMatricesOf2NodeLineElement(xy, mat: Material):
     """
-    Original name: EleCoeff2NodeEle, p. 64
+    Original name: EleCoeff2NodeEle (p.64)
     Coefficient matrices of a 2-node line element
-        Inputs:
-            xy(i,:)    - coordinates of node i (orgin at scaling centre).
-                         The nodes are numbered locally within each line element
-            mat        - material constants
-              mat.D    - elasticity matrix
-              mat.den  - mass density
-
-        Outputs:
-            e0, e1, e2, m0  - element coefficient matrices
+    :param xy[i, :]: coordinates of node i (origin at scaling centre).
+                    The nodes are numbered locally within each line element
+    :param mat: material constants (elasticity matrix, mass density)
+    :return: e0, e1, e2, m0  - element coefficient matrices
     """
     dxy = xy[1, :] - xy[0, :]                       # (2.50a), (2.50b)
     mxy = np.sum(xy, axis=0) / 2                    # (2.51a), (2.51b)
@@ -58,3 +54,44 @@ def coeffMatricesOf2NodeLineElement(xy, mat: Material):
     m0 = a * mat.den / 6 * np.array([[2, 0, 1, 0], [0, 2, 0, 1], [1, 0, 2, 0], [0, 1, 0, 2]])  # (3.112)
 
     return e0, e1, e2, m0
+
+def coeffMatricesOfSElement(xy, conn, mat: Material):
+    """
+    Original name: SElementCoeffMtx (p.67)
+    :param xy[i, :]: coordinates of node i (origin at scaling centre)
+                    The nodes are numbered locally within an S-element starting from 0
+    :param conn[ie, :]: local connectivity matrix of line element ie in the local nodal numbers of an S-element
+    :param mat: material constants (elasticity matrix, mass density)
+    :return: e0, e1, e2, m0  - coefficient matrices of S-element
+    """
+
+    # number of DOFs at boundary (2 DOFs per node)
+    nd = 2 * xy.shape[0]
+
+    # initialising variables
+    E0 = np.zeros((nd, nd), dtype=np.float32)
+    E1 = np.zeros((nd, nd), dtype=np.float32)
+    E2 = np.zeros((nd, nd), dtype=np.float32)
+    M0 = np.zeros((nd, nd), dtype=np.float32)
+
+    # loop over elements at boundary
+    for ie, elem_nodes in enumerate(conn):
+        # nodal coordinates of an element
+        xyEle = xy[elem_nodes]
+
+        # get element coefficient matrices of an element
+        ee0, ee1, ee2, em0 = coeffMatricesOf2NodeLineElement(xyEle, mat)
+
+        # local DOFs (in S-element) of an element
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        d = np.array([[2*nodeIdx, 2*nodeIdx + 1] for nodeIdx in elem_nodes]).flatten()
+
+        # assemble coefficient matrices of S-element
+        E0[d[:, np.newaxis], d] += ee0
+        E1[d[:, np.newaxis], d] += ee1
+        E2[d[:, np.newaxis], d] += ee2
+        M0[d[:, np.newaxis], d] += em0
+
+    return E0, E1, E2, M0

@@ -11,7 +11,7 @@ class Ch2Test(unittest.TestCase):
 
     def test_example_2_3(self):
         """
-        A square S-element is shown in Figure 2.20. Each edge is modelled by 1 line element.
+        Example 2.3 A square S-element is shown in Figure 2.20. Each edge is modelled by 1 line element.
         The dimensions, nodal numbers and the line element numbers (in circle) are shown in Figure 2.20.
         The elasticity constants are: Young’s modulus E and Poisson’s ratio ν = 0.
         Considering the plane stress states, determine the element coefficient matrices
@@ -171,3 +171,46 @@ class Ch2Test(unittest.TestCase):
             npt.assert_array_almost_equal(e1, exp_val[1], err_msg=f'Mismatched e1 for {xy}')
             npt.assert_array_almost_equal(e2, exp_val[2], err_msg=f'Mismatched e2 for {xy}')
 
+    def test_example_2_5(self):
+        """
+        Example 2.5 Use the function in Code List 2.2 to compute the coefficient matrices [E0], [E1] and [E2]
+        of the square S-element in Example 2.4 on page 65.
+        Assume the Young’s modulus is equal to E = 10 GPa and Poisson’s ratio ν = 0.
+        """
+        # Compute coefficient matrices of square S - element
+        xy = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]])
+        conn = np.array([[0, 1], [1, 2], [2, 3], [3, 0]]) #[1:4; 2:4 1]’
+        # elascity matrix(plane stress).
+        mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10, 0), den=2)
+        E0, E1, E2, M0 = sbfem.coeffMatricesOfSElement(xy, conn, mat)
+
+        expected_E0 = np.array([[10.,  0.,  1.67,  0.,  0., 0.,  3.33,  0.],
+                               [0., 10.,  0.,  3.33,  0., 0.,  0.,  1.67],
+                               [1.67,  0., 10.,  0.,  3.33, 0.,  0.,  0.],
+                               [0.,  3.33,  0., 10.,  0., 1.67,  0.,  0.],
+                               [0.,  0.,  3.33,  0., 10., 0.,  1.67,  0.],
+                               [0.,  0.,  0.,  1.67,  0., 10.,  0.,  3.33],
+                               [3.33,  0.,  0.,  0.,  1.67, 0., 10.,  0.],
+                               [0.,  1.67,  0.,  0.,  0., 3.33,  0., 10.]])
+
+        expected_E1 = np.array([[-2.5,  2.5,  0.83,  0.,  0., 0.,  1.67,  2.5],
+                                [2.5, -2.5,  2.5,  1.67,  0., 0.,  0.,  0.83],
+                                [0.83,  0., -2.5, -2.5,  1.67, -2.5,  0.,  0.],
+                                [-2.5,  1.67, -2.5, -2.5,  0., 0.83,  0.,  0.],
+                                [0.,  0.,  1.67,  2.5, -2.5, 2.5,  0.83,  0.],
+                                [0.,  0.,  0.,  0.83,  2.5, -2.5,  2.5,  1.67],
+                                [1.67, -2.5,  0.,  0.,  0.83, 0., -2.5, -2.5],
+                                [0.,  0.83,  0.,  0., -2.5, 1.67, -2.5, -2.5]])
+
+        expected_E2 = np.array([[10.,  0., -5.83,  0.,  0., 0., -4.17,  0.],
+                                [0., 10.,  0., -4.17,  0., 0.,  0., -5.83],
+                                [-5.83,  0., 10.,  0., -4.17, 0.,  0.,  0.],
+                                [0., -4.17,  0., 10.,  0., -5.83,  0.,  0.],
+                                [0.,  0., -4.17,  0., 10., 0., -5.83,  0.],
+                                [0.,  0.,  0., -5.83,  0., 10.,  0., -4.17],
+                                [-4.17,  0.,  0.,  0., -5.83, 0., 10.,  0.],
+                                [0., -5.83,  0.,  0.,  0., -4.17,  0., 10. ]])
+
+        npt.assert_array_almost_equal(E0, expected_E0, decimal=2, err_msg="E0")
+        npt.assert_array_almost_equal(E1, expected_E1, decimal=2, err_msg="E1")
+        npt.assert_array_almost_equal(E2, expected_E2, decimal=2, err_msg="E2")
