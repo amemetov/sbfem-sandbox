@@ -171,4 +171,4 @@ def sbfem(E0, E1, E2, M0):
     # Eq. (3.105)
     M = np.real(v11inv.T.dot(M0).dot(v11inv))
 
-    return K, d, v, M
+    return K, d, v11, M
