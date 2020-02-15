@@ -1,5 +1,6 @@
 import numpy as np
 import scipy.linalg as linalg
+from scipy.sparse import csr_matrix as sparse_matrix
 import matplotlib.pyplot as plt
 
 
@@ -172,3 +173,96 @@ def sbfem(E0, E1, E2, M0):
     M = np.real(v11inv.T.dot(M0).dot(v11inv))
 
     return K, d, v11, M
+
+def sbfemAssembly(coord, sdConn, sdSC, mat):
+    """
+    Original name: SBFEMAssembly (p.88)
+    Assembly of global stiffness and mass matrices.
+    :param coord: coord[i,:] - coordinates of node i
+    :param sdConn: sdConn{isd,:}(ie,:) - S-element connectivity. The nodes of line element ie in S-element isd.
+    :param sdSC: sdSC(isd,:) - coordinates of scaling centre of S-element isd
+    :param mat: material constants (elasticity matrix, mass density)
+    :return: sdSln, K, M
+    sdSln - solutions for S-element
+    K - global stiffness matrix
+    M - global mass matrix
+    """
+
+    # Solution of subdomains
+
+    # number of S-elements
+    Nsd = sdConn.shape[0]
+
+    # store solutions for S-elements
+    sdSln = []
+
+    # loop over S-elements
+    for isd in range(Nsd):
+        # sdNode contains global nodal numbers of the nodes in an S-element.
+        # Vector ic maps the global connectivity to the local connectivity of the S-element
+        sdNode, ic = np.unique(sdConn[isd].flatten(), return_inverse=True) # remove duplicates
+        xy = coord[sdNode]  # nodal coordinates
+        # transform coordinate origin to scaling centre
+        xy = xy - sdSC[isd]
+        # line element connectivity in local nodal numbers of an S-element
+        LConn = np.reshape(ic, sdConn[isd].shape)
+        # compute S-element coefficient matrices
+        E0, E1, E2, M0 = coeffMatricesOfSElement(xy, LConn, mat)
+        # compute solution for S-element
+        K, d, v, M = sbfem(E0, E1, E2, M0)
+        # store S-element data and solution
+        sdSln.append({
+            'xy': xy,
+            'sc': sdSC[isd],
+            'conn': LConn,
+            'node': sdNode,
+            'K': K, 'M': M, 'd': d, 'v': v
+        })
+
+    # Assembly
+    # sum of entries of stiffness matrices of all S-elements
+    ncoe = 0
+    for sln in sdSln:
+        ncoe += sln['K'].size
+
+    # initializing non-zero entries in global stiffness and mass matrix
+    K = np.zeros(ncoe)
+    M = np.zeros(ncoe)
+    # rows and columns of non-zero entries in global stiffness matrix
+    Ki = np.zeros(ncoe, dtype=np.int32)
+    Kj = np.zeros(ncoe, dtype=np.int32)
+
+    StartInd = 0  # starting position of an S-element stiffness matrix
+    # loop over subdomains
+    for sln in sdSln:
+        # global DOFs of nodes in an S-element
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        dof = np.concatenate((np.reshape(2 * sln['node'], (-1, 1)),
+                              np.reshape(2 * sln['node'] + 1, (-1, 1))), axis=1).reshape((-1, 1))
+        # number of DOFs of an S-element
+        Ndof = dof.shape[0]
+        # row and column numbers of stiffness coefficients of an S-element
+        sdI = np.tile(dof, (1, Ndof))
+        sdJ = sdI.T
+
+        # store stiffness, row and column indices
+        EndInd = StartInd + Ndof**2 # ending position
+        K[StartInd:EndInd] = sln['K'].flatten()
+        M[StartInd:EndInd] = sln['M'].flatten()
+        Ki[StartInd:EndInd] = sdI.flatten()
+        Kj[StartInd:EndInd] = sdJ.flatten()
+
+        StartInd = EndInd  # increment the starting position
+
+    # form global stiffness matrix in sparse storage
+    K = sparse_matrix((K, (Ki, Kj)))
+    # ensure symmetry
+    K = (K+K.T)/2
+    # form global mass matrix in sparse storage
+    M = sparse_matrix((M, (Ki,Kj)))
+    # ensure symmetry
+    M = (M+M.T)/2
+
+    return sdSln, K, M
