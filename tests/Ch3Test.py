@@ -133,4 +133,46 @@ class Ch3Test(unittest.TestCase):
         npt.assert_array_almost_equal(M, exp_M, decimal=4, err_msg=f"Mismatched 'M'")
 
 
+    def test_example_3_3(self):
+        """
+        Example 3.3 Rectangular Body Under Uniaxial Tension: Assembly of Global Equations and Solution
+        A rectangular body is modelled by 3 S-elements as shown in Figure 3.3a.
+        The dimensions (Unit: m) are indicated in Figure 3.3 with b = 1.
+        The material constant are Young’s modulus E = 10 GPa and Poisson’s ratio ν = 0.25.
+        The input of the S-element data and the assembly of the global stiffness matrix are illustrated.
+        """
+        # Mesh
+        # nodal coordinates. One node per row [x y]
+        coord = np.array([[0, 0], [0, 1], [0, 3], [1, 0], [1, 1], [2, 0], [2, 1], [2, 3]])
+
+        # Input S-element connectivity as a cell array (One S-element per cell).
+        # In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2].
+        sdConn = np.array([
+            np.array([[1, 4], [4, 6], [6, 7], [7, 2], [2, 1]]),     # S-element 1
+            np.array([[0, 3], [3, 4], [4, 1], [1, 0]]),             # S-element 2
+            np.array([[3, 5], [5, 6], [6, 4], [4, 3], ])            # S-element 3
+        ])
+
+        # coordinates of scaling centres of S-elements.
+        sdSC = np.array([[1, 2], [0.5, 0.5], [1.5, 0.5]])  # one S-element per row
+
+        # elascity matrix(plane stress).
+        mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10E6, 0.25), den=2)
+
+        # # Boundary conditions
+        # # nodal forces. One force component per row: [Node Dir F]
+        # BC_Frc = np.array([[3, 2, 1E3], [8, 2, 1E3]])  # forces in KN
+        # # assemblage external forces
+        # ndn = 2  # 2 DOFs per node
+        # NDof = ndn*coord.shape[0]  # number of DOFs
+        # F = np.zeros((NDof, 1))  # initializing right-hand side of equation [K]{u} = {F}
+        # F = AddNodalForces(BC_Frc, F)  # add prescribed nodal forces
+        # # displacement constraints. One constraint per row: [Node Dir Disp]
+        # BC_Disp = np.array([[1, 2, 0], [4, 1, 0], [4, 2, 0], [6, 2, 0]])
+
+        # solution of S-elements and assemblage of global stiffness and mass matrices
+        sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+
+        # TODO: add asserts
+        pass
 
