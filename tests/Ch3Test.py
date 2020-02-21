@@ -37,7 +37,12 @@ class Ch3Test(unittest.TestCase):
 
         exp_d = np.array([1.915, 1.915, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0])
 
-        exp_v = np.array([
+        # See the p.81 in the book:
+        # "The eigenvectors are not uniquely defined.
+        # A linear combination of the eigenvectors having the same eigenvalue is also an eigenvector.
+        # So the eigenvector matrix may vary in value."
+        # That's why MATLAB's result is not equal to numpy's result
+        exp_v_matlab = np.array([
             [-1.0000, -0.1512, -0.3740, 0.4303, 1.0000, 0.3174, 1.0000, 0],
             [0.1741, 0.9923, 0.3444, -0.0109, -0.2360, 1.0000, 0, 1.0000],
             [1.0000, -0.1956, -1.0000, 1.0000, 0.1011, 0.3477, 1.0000, 0],
@@ -46,6 +51,17 @@ class Ch3Test(unittest.TestCase):
             [0.1741, 0.9923, -0.3444, 0.0109, 0.2360, -1.0000, 0, 1.0000],
             [1.0000, -0.1956, 1.0000, -1.0000, -0.1011, -0.3477, 1.0000, 0],
             [0.1741, -1.0000, 0.0325, -0.3071, -0.2360, 0.9180, 0, 1.0000],
+        ])
+
+        exp_v = np.array([
+            [-1., 0.33204028, 0.2601756, 0.17754629, 0.8948948, .9987538, 1., 0.],
+            [0.4707163, -1., 1., 1., -0.2334168, -0.79493344, 0., 1.],
+            [0.8934963, 0.00624237, 0.08511568, -0.08825487, -1., 1., 1., 0.],
+            [-0.14110094, 0.9432859, -0.19000392, 0.09348565, 0.04034438, 0.28203753, 0., 1.],
+            [-1., 0.33204025, -0.2601756, -0.17754629, -0.8948948, -0.99875367, 1., 0.],
+            [0.4707163, -1., -1., -1., 0.2334168, 0.79493344, 0., 1.],
+            [0.8934963, 0.00624237, -0.08511567, 0.08825487, 1., -1., 1., 0.],
+            [-0.14110094, 0.9432859, 0.19000392, -0.09348565, -0.04034438, -0.28203753, 0., 1.]
         ])
 
         exp_M = np.array([
@@ -61,8 +77,7 @@ class Ch3Test(unittest.TestCase):
 
         npt.assert_array_almost_equal(K, exp_K, decimal=4, err_msg=f"Mismatched 'K'")
         npt.assert_array_almost_equal(d, exp_d, decimal=4, err_msg=f"Mismatched 'd'")
-        # TODO: check v - it is not equal to value from Matlab code
-        # npt.assert_array_almost_equal(v, exp_v, decimal=4, err_msg=f"Mismatched 'v'")
+        npt.assert_array_almost_equal(v, exp_v, decimal=4, err_msg=f"Mismatched 'v'")
         npt.assert_array_almost_equal(M, exp_M, decimal=4, err_msg=f"Mismatched 'M'")
 
     def test_example_3_2(self):
@@ -100,7 +115,12 @@ class Ch3Test(unittest.TestCase):
 
         exp_d = np.array([2.1922, 2.1922, 2.1731, 2.1731, 1.0, 1.0, 1.0, 1.0, 0, 0])
 
-        exp_v = np.array([
+        # See the p.81 in the book:
+        # "The eigenvectors are not uniquely defined.
+        # A linear combination of the eigenvectors having the same eigenvalue is also an eigenvector.
+        # So the eigenvector matrix may vary in value."
+        # That's why MATLAB's result is not equal to numpy's result
+        exp_v_matlab = np.array([
             [1.0000, 0.1839, -0.8822, -0.4810, -0.0868, -0.1261, -1.0000, 0.8781, 1.0000, 0],
             [-0.3169, -0.7495, 0.2330, 0.7294, 0.7494, 0.8352, 0.1016, 0.0585, 0, 1.0000],
             [-0.9650, -0.3317, 0.5767, -0.4590, 0.0154, 0.0446, -0.5582, -0.1972, 1.0000, 0],
@@ -111,6 +131,19 @@ class Ch3Test(unittest.TestCase):
             [-0.6508, -0.1708, -0.5340, -0.0080, -0.2125, -1.0000, 0.1528, -0.2122, 0, 1.0000],
             [-0.4325, 0.4960, 0.5767, 0.3943, -0.0691, -0.1225, -0.0598, 0.7399, 1.0000, 0],
             [0.6336, 0.8717, 0.7070, -0.4380, 0.8687, -0.2667, 0.4117, -0.2488, 0, 1.0000]
+        ])
+
+        exp_v = np.array([
+            [0.71758074, 0.23347954, -0.8587076, -0.83569264, -0.13273108, -0.13273108, -1., -0.07175396, 1., 0.],
+            [-0.99999994, 0.5518595, 0.72732323, -0.13253976, -0.431271, -0.431271, 0.09133565, 0.70437855, 0., 1.],
+            [-0.8648721, -0.08569754, -0.0813418, 0.99999994, 0.9921319, 0.9921319, -0.19926828, 0.13242416, 1., 0.],
+            [0.25068188, -0.70299536, -0.73159266, 0.12245806, -0.72983515, -0.72983515, 0.05207613, -0.47832555, 0., 1.],
+            [0.8109459, -0.5256907, 0.14727768, -0.63499165, 0.7459025, 0.7459025, 0.8768455, 0.15359661, 1., 0.],
+            [-0.02525895, 0.79260296, 0.90562814, 0.9951703, -0.01979191, -0.01979191, -0.05915082, -1., 0., 1.],
+            [-0.996676, 1., -1., 0.17478584, -0.5311387, -0.5311387, 0.7411887, -0.03749618, 1., 0.],
+            [-0.52411544, -0.1057132, -0.28453222, -0.6719015, 0.717603, 0.717603, -0.08863334, -0.13970844, 0., 1.],
+            [0.33301708, -0.6220877, 0.62771815, 0.4995333, -1.0741643, -1.0741643, -0.4187658, -0.17677055, 1., 0.],
+            [1.2986825, -0.53575546, 0.00396588, 1.1527681, 0.46329504, 0.46329504, 0.00437238, 0.91365534, 0., 1.]
         ])
 
         exp_M = np.array([
@@ -128,8 +161,7 @@ class Ch3Test(unittest.TestCase):
 
         npt.assert_array_almost_equal(K, exp_K, decimal=4, err_msg=f"Mismatched 'K'")
         npt.assert_array_almost_equal(d, exp_d, decimal=4, err_msg=f"Mismatched 'd'")
-        # TODO: check v - it is not equal to value from Matlab code
-        # npt.assert_array_almost_equal(v, exp_v, decimal=4, err_msg=f"Mismatched 'v'")
+        npt.assert_array_almost_equal(np.real(v), np.real(exp_v), decimal=4, err_msg=f"Mismatched 'v'")
         npt.assert_array_almost_equal(M, exp_M, decimal=4, err_msg=f"Mismatched 'M'")
 
 
