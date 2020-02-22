@@ -204,6 +204,51 @@ class Ch3Test(unittest.TestCase):
             actualVal = K[s, e]
             self.assertAlmostEqual(1.0e-07 * actualVal, expectedValue, places=4, msg=f"s: {matlabStartIdx}, e: {matlabEndIdx}")
 
+    def test_example_3_4(self):
+        """
+        Example 3.4 Uniaxial Tension of a Rectangular Body.
+        Consider the problem shown in Figure 3.3, Example 3.3 on page 90.
+        A vertical force F = 1000 KN∕m is applied at Nodes 3 and 8.
+        Determine the nodal displacements and the support reactions.
+        """
+        example3 = self._example3SElements()
+        coord = example3['coord']
+        sdConn = example3['sdConn']
+        sdSC = example3['sdSC']
+        mat = example3['mat']
+        F = example3['F']
+        BC_Disp = example3['BC_Disp']
+
+
+        # solution of S-elements and assemblage of global stiffness and mass matrices
+        sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+
+        # Static solution of nodal displacements and forces
+        d, F = sbfem.solverStatics(K, BC_Disp, F)
+
+        expected_d = np.array([
+            2.49999999999999e-05, 0, 2.49999999999996e-05, 9.99999999999995e-05,
+            2.49999999999975e-05,  0.000299999999999999, 0, 0,
+            -3.97995666365029e-19, 0.0001, -2.50000000000002e-05, 0,
+            -2.50000000000004e-05, 0.000100000000000001, -2.50000000000024e-05, 0.000300000000000001
+        ])
+
+        expected_F = np.array([
+            -2.8421709430404e-14, -499.999999999998, 0, 2.27373675443232e-13,
+            -4.2632564145606e-14, 1000, 4.54747350886464e-13, -1000,
+            -5.6843418860808e-14, -2.27373675443232e-13, 7.105427357601e-15, -500.000000000003,
+            2.22044604925031e-15, 1.13686837721616e-13, 5.6843418860808e-14, 1000
+
+        ])
+
+        npt.assert_array_almost_equal(d, expected_d, decimal=4, err_msg=f"Mismatched 'd'")
+        npt.assert_array_almost_equal(F, expected_F, decimal=4, err_msg=f"Mismatched 'F'")
+
+        # Plot deformed mesh
+        # figure
+        # opt = struct(’MagnFct’, 0.1, ’Undeformed’,’--k’);
+        # PlotDeformedMesh(d, coord, sdConn, opt)
+
     def _example3SElements(self):
         """
         Original name: Exmpl3SElements (p.90)
@@ -242,7 +287,6 @@ class Ch3Test(unittest.TestCase):
                 'sdConn': sdConn,
                 'sdSC': sdSC,
                 'mat': mat,
-                'BC_Frc': BC_Frc,
                 'F': F,
                 'BC_Disp': BC_Disp
         }
