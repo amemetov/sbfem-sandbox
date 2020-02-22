@@ -271,7 +271,8 @@ def addNodalForces(BC_Frc, F):
     """
     Original name: AddNodalForces (p.95)
     Assembly of prescribed nodal forces to load vector.
-    :param BC_Frc: BC_Frc(i,:) - one force component per row [Node Dir F]
+    :param BC_Frc: BC_Frc(i,:) - one force component per row [Node Dir F],
+    where Dir can be 1 for x-direction and 2 for y-direction
     :param F: nodal force vector
     :return: nodal force vector
     """
@@ -279,7 +280,15 @@ def addNodalForces(BC_Frc, F):
     ndn = 2
     if len(BC_Frc) > 0:
         # DOFs
-        fdof = (BC_Frc[:,0] - 1)*ndn + BC_Frc[:,1]
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        node = BC_Frc[:, 0]
+        prevNode = node - 1
+        prevNodeUy = ndn*prevNode + 1
+        fdof = prevNodeUy + BC_Frc[:, 1]
+        fdof = fdof.astype(np.int)
+
         # accumulate forces
         F[fdof] = F[fdof] + BC_Frc[:, 2]
 
