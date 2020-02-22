@@ -3,6 +3,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import sbfem.sbfem as sbfem
+import sbfem.utils as utils
 
 
 class Ch3Test(unittest.TestCase):
@@ -246,8 +247,8 @@ class Ch3Test(unittest.TestCase):
 
         # Plot deformed mesh
         # figure
-        # opt = struct(’MagnFct’, 0.1, ’Undeformed’,’--k’);
-        # PlotDeformedMesh(d, coord, sdConn, opt)
+        opt = {'MagnFct': 0.1, 'Undeformed': '--'}
+        utils.plotDeformedMesh(d, coord, sdConn, opt)
 
     def _example3SElements(self):
         """
