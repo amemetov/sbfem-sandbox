@@ -266,3 +266,21 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
     M = (M+M.T)/2
 
     return sdSln, K, M
+
+def addNodalForces(BC_Frc, F):
+    """
+    Original name: AddNodalForces (p.95)
+    Assembly of prescribed nodal forces to load vector.
+    :param BC_Frc: BC_Frc(i,:) - one force component per row [Node Dir F]
+    :param F: nodal force vector
+    :return: nodal force vector
+    """
+    # 2 DOFs per node
+    ndn = 2
+    if len(BC_Frc) > 0:
+        # DOFs
+        fdof = (BC_Frc[:,0] - 1)*ndn + BC_Frc[:,1]
+        # accumulate forces
+        F[fdof] = F[fdof] + BC_Frc[:, 2]
+
+    return F
