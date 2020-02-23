@@ -1,7 +1,6 @@
 import numpy as np
-import scipy.linalg as linalg
 from scipy.sparse import csr_matrix as sparse_matrix
-import matplotlib.pyplot as plt
+import scipy.sparse.linalg
 
 
 class Material(object):
@@ -266,3 +265,77 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
     M = (M+M.T)/2
 
     return sdSln, K, M
+
+def addNodalForces(BC_Frc, F):
+    """
+    Original name: AddNodalForces (p.95)
+    Assembly of prescribed nodal forces to load vector.
+    :param BC_Frc: BC_Frc(i,:) - one force component per row [Node Dir F],
+    where Dir can be 1 for x-direction and 2 for y-direction
+    :param F: nodal force vector
+    :return: nodal force vector
+    """
+    # 2 DOFs per node
+    ndn = 2
+    if len(BC_Frc) > 0:
+        # DOFs
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        node = BC_Frc[:, 0]
+        prevNode = node - 1
+        prevNodeUy = ndn*prevNode + 1
+        fdof = prevNodeUy + BC_Frc[:, 1]
+        fdof = fdof.astype(np.int)
+
+        # accumulate forces
+        F[fdof] = F[fdof] + BC_Frc[:, 2]
+
+    return F
+
+
+def solverStatics(K, BC_Disp, F):
+    """
+    Original name: SolverStatics (p.97)
+    2D Static Analysis by the Scaled Boundary Finite Element Method.
+    :param K: static stiffness matrix
+    :param BC_Disp: prescribed displacements in rows of [Node, Direction (=1 for x; =2 for y), Displacement]
+    :param F: external load vector
+    :return: (d, F) where
+    d - nodal displacements
+    F - external nodal forces including support reactions
+    """
+    ndn = 2 # 2 DOFs per node
+    NDof = K.shape[0]
+    # Initialization of nodal displacements
+    d = np.zeros(NDof)
+
+    # enforcing displacement boundary condition
+    # initialization of unconstrained (free) DOFs with unknown displacements
+    FDofs = np.arange(NDof)
+    if len(BC_Disp) > 0:
+        # constrained DOFs with prescribed displacements
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        node = BC_Disp[:, 0]
+        prevNode = node - 1
+        prevNodeUy = ndn*prevNode + 1
+        CDofs = prevNodeUy + BC_Disp[:, 1]
+        # remove constrained DOFs
+        # FDofs[CDofs] = []
+        FDofs = np.delete(FDofs, CDofs)
+        F = F - K[:,CDofs]*BC_Disp[:, 2]  # Eq. (3.52)
+        # store prescribed displacements
+        d[CDofs] = BC_Disp[:, 2]
+
+    # displacement of free DOFs, see Eq. (3.53)
+    # the origin code uses matrix left division
+    # which is a solution of Ax = B for x
+    # for numpy: linalg.solve(a,b) if a is square; linalg.lstsq(a,b) otherwise
+    d[FDofs] = scipy.sparse.linalg.spsolve(K[FDofs, :][:, FDofs], F[FDofs])
+
+    # external forces, see Eq. (3.51)
+    F = K * d
+
+    return d, F
