@@ -87,7 +87,7 @@ def plotDeformedMesh(d, coord, sdConn, opt):
     plt.xlabel('x')
     plt.ylabel('y')
 
-    # plt.savefig("../test.png")
+    plt.savefig("../test.png")
     plt.legend()
     plt.show()
 
