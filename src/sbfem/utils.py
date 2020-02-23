@@ -80,6 +80,8 @@ def plotDeformedMesh(d, coord, sdConn, opt):
         plotSBFEMesh(coord, sdConn, undeformedopt)
 
     plt.title('DEFORMED MESH')
+    plt.gca().set_aspect('equal', adjustable='box')
+
     # plot deformed mesh
     deformedopt = {'LineSpec': '-'}  # plotting option
     plotSBFEMesh(deformed, sdConn, deformedopt)
@@ -87,8 +89,9 @@ def plotDeformedMesh(d, coord, sdConn, opt):
     plt.xlabel('x')
     plt.ylabel('y')
 
-    plt.savefig("../test.png")
-    plt.legend()
+    if 'savePath' in opt:
+        plt.savefig(opt['savePath'])
+
     plt.show()
 
     return deformed, fct
