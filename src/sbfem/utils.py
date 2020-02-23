@@ -1,6 +1,25 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+
+def matlabToPythonIndices(indices):
+    """
+    Converts matlab indices (starting from 1) to corresponding python indices (starting from 0).
+    Expects one of the following types: `int`, `list` or `numpy array`.
+    For other cases raises ValueError.
+    """
+    if isinstance(indices, int):
+        return indices - 1
+
+    if isinstance(indices, list):
+        return [matlabToPythonIndices(i) for i in indices]
+
+    if isinstance(indices, np.ndarray):
+        return indices - 1
+
+    raise ValueError("`matlabToPythonIndices` allows only one of the following types of argument: "
+                     f"`int`, `list`, `numpy array`. Got {type(indices)}")
+
 def plotSBFEMesh(coord, sdConn, opt):
     """
     The original name: PlotSBFEMesh (p.98)

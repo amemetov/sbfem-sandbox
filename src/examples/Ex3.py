@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import sbfem.sbfem as sbfem
+import sbfem.utils as utils
 
 
 def example3SElements():
@@ -162,29 +163,27 @@ def example_3_5():
     ])
 
     # nodes of a polygon. The sequence follows counter-clockwise direction.
-    polygon = [
-        np.array([[3, 7, 6, 2]]),
-        np.array([[15, 16, 14, 13]]),
-        np.array([[2, 6, 5, 4, 1]]),
-        np.array([[12, 15, 13, 11, 10]]),
-        np.array([[7, 12, 10, 5, 6]]),
-        np.array([[4, 5, 10, 11, 8]]),
-        np.array([[8, 11, 13, 14, 9]])
-    ]
+    polygon = utils.matlabToPythonIndices([
+        np.array([3, 7, 6, 2]),
+        np.array([15, 16, 14, 13]),
+        np.array([2, 6, 5, 4, 1]),
+        np.array([12, 15, 13, 11, 10]),
+        np.array([7, 12, 10, 5, 6]),
+        np.array([4, 5, 10, 11, 8]),
+        np.array([8, 11, 13, 14, 9])
+    ])
 
     # Input S-element connectivity as a cell array (One S-element per cell).
     # In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2].
     nsd = len(polygon)  # ltx number of S-elements
     sdConn = [None] * nsd  # initialising connectivity
     sdSC = np.zeros((nsd, 2))  # scaling centre
-    # for isub in range(nsd):
-    #     # build connectivity
-    #     sdConn{isub}=[polygon{isub}; ...
-    #                   polygon{isub}(2:end) polygon{isub}(1)]';
-    #
-    #     sdConn[isub] =
-    #     # scaling centre at centroid of nodes (averages of nodal coorindates)
-    #     sdSC(isub,:) = mean(coord(polygon{isub},:));
-    # end
+    for isub in range(nsd):
+        # build connectivity
+        sdConn[isub] = np.vstack((polygon[isub], np.hstack((polygon[isub][1:], polygon[isub][0:1])))).T
+        # scaling centre at centroid of nodes (averages of nodal coorindates)
+        sdSC[isub, :] = np.mean(coord[polygon[isub], :])
+
+    # TODO: implement the rest
 
 
