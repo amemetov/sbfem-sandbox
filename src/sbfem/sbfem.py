@@ -190,7 +190,7 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
     # Solution of subdomains
 
     # number of S-elements
-    Nsd = sdConn.shape[0]
+    Nsd = len(sdConn)
 
     # store solutions for S-elements
     sdSln = []
@@ -293,6 +293,38 @@ def addNodalForces(BC_Frc, F):
 
     return F
 
+
+def addSurfaceTraction(coord, edge, trac, F):
+    """
+    Original name: addSurfTraction (p.95)
+    Assembly of surface tractions as equivalent nodal forces to load vector
+    :param coord: coord(i,:) - coordinates of node i
+    :param edge: edge(i,1:2) - the 2 nodes of edge i
+    :param trac: trac - surface traction
+                when trac has only one column trac(1:4) - surface traction at the 2 nodes of all edges
+                when trac has more than one column trac(1:4,i) - surface traction at the 2 nodes of edge i
+    :param F: global load vector
+    :return: global load vector
+    """
+
+    if trac.shape[1] == 1:  # expand uniform surface traction to all edges
+        trac = trac[:, np.ones((1, edge.shape[0]))]
+
+    # equivalent nodal forces
+    fmtx = np.array([[2, 0, 1, 0], [0, 2, 0, 1], [1, 0, 2, 0], [0, 1, 0, 2]])  # see Eq.3.49
+    edgeLen = np.sqrt(np.sum((coord[edge[:, 1], :] -  coord[edge[:,0], :])**2, 1))  # edge length
+    nodalF = 1/6*np.matmul(fmtx, trac)*np.tile(np.expand_dims(edgeLen, 1), (1, 4)).T  # Eq. (3.49)
+
+    # assembly of nodal forces
+    for ii in range(edge.shape[0]):
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        dofs = np.array([2 * edge[ii, 0], 2 * edge[ii, 0] + 1,
+                         2 * edge[ii, 1], 2 * edge[ii, 1] + 1])
+        F[dofs] += nodalF[:, ii]
+
+    return F
 
 def solverStatics(K, BC_Disp, F):
     """

@@ -1,6 +1,7 @@
 import math
 import numpy as np
 import sbfem.sbfem as sbfem
+import sbfem.utils as utils
 
 
 def example3SElements():
@@ -140,6 +141,73 @@ def example_3_4():
 
     return {
         'in': example,
+        'out': {'d': d, 'F': F}
+    }
+
+
+def example_3_5():
+    """
+    Example 3.5 A Deep Cantilever Beam Subject to Bending.
+    A deep cantilever beam of height H = 1 m and length L = 2 m is shown in Figure 3.6a.
+    A bending moment M = 100 kNm, which is equivalent to the linearly distributed surface traction
+    with p = 600kN∕m, is applied at the free end.
+    The material properties are Young’s modulus E = 10 GPa and Poisson’s ratio ν = 0.2.
+    Plane stress conditions are assumed. Determine the deflection of the beam.
+    """
+
+    # Mesh
+    # nodal coordinates. One node per row [x y]
+    coord = np.array([
+        [0, 1], [0, 0.5], [0, 0], [0.68, 1], [0.68, 0.63], [0.49, 0.48],  [0.5, 0], [1.35, 1],
+        [2, 1], [1, 0.45], [1.35, 0.62], [1, 0], [1.5, 0.47], [2, 0.5], [1.5, 0], [2, 0]
+    ])
+
+    # nodes of a polygon. The sequence follows counter-clockwise direction.
+    polygon = utils.matlabToPythonIndices([
+        np.array([3, 7, 6, 2]),
+        np.array([15, 16, 14, 13]),
+        np.array([2, 6, 5, 4, 1]),
+        np.array([12, 15, 13, 11, 10]),
+        np.array([7, 12, 10, 5, 6]),
+        np.array([4, 5, 10, 11, 8]),
+        np.array([8, 11, 13, 14, 9])
+    ])
+
+    # Input S-element connectivity as a cell array (One S-element per cell).
+    # In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2].
+    nsd = len(polygon)  # ltx number of S-elements
+    sdConn = [None] * nsd  # initialising connectivity
+    sdSC = np.zeros((nsd, 2))  # scaling centre
+    for isub in range(nsd):
+        # build connectivity
+        sdConn[isub] = np.vstack((polygon[isub], np.hstack((polygon[isub][1:], polygon[isub][0:1])))).T
+        # scaling centre at centroid of nodes (averages of nodal coorindates)
+        sdSC[isub, :] = np.mean(coord[polygon[isub], :], axis=0)
+
+    # Materials: elasticity matrix for plane stress condition
+    mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10E9, 0.2), den=2000)  # mass density in kg∕m 3
+
+    # Boundary conditions
+    # displacement constraints (or prescribed acceleration in a response history analysis).
+    # One constraint per row: [Node Dir Disp]
+    BC_Disp = np.array([[0, 1, 0], [0, 2, 0], [1, 1, 0], [1, 2, 0], [2, 1, 0], [2, 2, 0]])
+
+    # assemble nodal forces
+    ndn = 2  # 2 DOFs per node
+    NDof = ndn*coord.shape[0]  # number of DOFs
+    F = np.zeros(NDof)  # initializing right-hand side of equation [K]{u} = {F}
+    edge = utils.matlabToPythonIndices(np.array([[16, 14], [14, 9]]))  # edges subject to tractions, one row per edge
+    trac = np.array([[6E5, 0, 0, 0], [0, 0, -6E5, 0]]).T  # tractions, one column per edge
+    F = sbfem.addSurfaceTraction(coord, edge, trac, F)
+
+    # solution of S-elements and assemblage of global stiffness and mass matrices
+    sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+
+    # Static solution of nodal displacements and forces
+    d, F = sbfem.solverStatics(K, BC_Disp, F)
+
+    return {
+        'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp },
         'out': {'d': d, 'F': F}
     }
 
