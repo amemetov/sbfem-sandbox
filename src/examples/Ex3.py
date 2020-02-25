@@ -182,7 +182,7 @@ def example_3_5():
         # build connectivity
         sdConn[isub] = np.vstack((polygon[isub], np.hstack((polygon[isub][1:], polygon[isub][0:1])))).T
         # scaling centre at centroid of nodes (averages of nodal coorindates)
-        sdSC[isub, :] = np.mean(coord[polygon[isub], :])
+        sdSC[isub, :] = np.mean(coord[polygon[isub], :], axis=0)
 
     # Materials: elasticity matrix for plane stress condition
     mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10E9, 0.2), den=2000)  # mass density in kg∕m 3
@@ -190,7 +190,7 @@ def example_3_5():
     # Boundary conditions
     # displacement constraints (or prescribed acceleration in a response history analysis).
     # One constraint per row: [Node Dir Disp]
-    BC_Disp = np.array([[1, 1, 0], [1, 2, 0], [2, 1, 0], [2, 2, 0], [3, 1, 0], [3, 2, 0]])
+    BC_Disp = np.array([[0, 1, 0], [0, 2, 0], [1, 1, 0], [1, 2, 0], [2, 1, 0], [2, 2, 0]])
 
     # assemble nodal forces
     ndn = 2  # 2 DOFs per node

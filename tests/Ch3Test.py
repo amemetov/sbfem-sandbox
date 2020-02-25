@@ -204,11 +204,11 @@ class Ch3Test(unittest.TestCase):
                                          0.0048, 0.1245, -0.0003, 0.2223, 0.0841, 0.1266, 0.1121, 0.2257
                                          ])
 
-        expected_F = 1.0e+05 * np.array([1.0044, -0.0230, -0.0087, 0.1300, -0.9956, -0.1069, -0.0000, -0.0000,
+        expected_F = np.array([1.0044, -0.0230, -0.0087, 0.1300, -0.9956, -0.1069, -0.0000, -0.0000,
                                          -0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, -0.0000, -0.0000,
                                          -1.0000, 0.0000, 0.0000, 0.0000, -0.0000, 0.0000, 0.0000, -0.0000,
                                          -0.0000, -0.0000, 0.0000, -0.0000, -0.0000, 0.0000, 1.0000, -0.0000
                                          ])
 
         npt.assert_array_almost_equal(d, expected_d, decimal=4, err_msg=f"Mismatched 'd'")
-        npt.assert_array_almost_equal(F, expected_F, decimal=4, err_msg=f"Mismatched 'F'")
+        npt.assert_array_almost_equal(1.0e-05 * F, expected_F, decimal=4, err_msg=f"Mismatched 'F'")
