@@ -200,10 +200,6 @@ def example_3_5():
     trac = np.array([[6E5, 0, 0, 0], [0, 0, -6E5, 0]]).T  # tractions, one column per edge
     F = sbfem.addSurfaceTraction(coord, edge, trac, F)
 
-    # TODO:
-    opt = {'sdSC': sdSC, 'LabelSC': 14, 'LineSpec': '-', 'PlotNode': 1, 'LabelNode': 14, 'BC_Disp': BC_Disp}
-    utils.plotSBFEMesh(coord, sdConn, opt)
-
     # solution of S-elements and assemblage of global stiffness and mass matrices
     sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
 

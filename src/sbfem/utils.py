@@ -43,6 +43,12 @@ def plotSBFEMesh(coord, sdConn, opt):
         BC_Frc: if specified, plot a marker at a node with applied force(s)
     """
 
+    if 'title' in opt:
+        plt.title(opt['title'])
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlabel('x')
+    plt.ylabel('y')
+
     LineWidth = 1
     LineSPec = '-'
     # use specified LineSpec if present
@@ -66,6 +72,9 @@ def plotSBFEMesh(coord, sdConn, opt):
     X = np.vstack((coord[meshEdge[:, 0], 0].T, coord[meshEdge[:, 1], 0].T))
     Y = np.vstack((coord[meshEdge[:, 0], 1].T, coord[meshEdge[:, 1], 1].T))
     plt.plot(X, Y, color='green', linestyle=LineSPec, linewidth=LineWidth)
+
+    if 'savePath' in opt:
+        plt.savefig(opt['savePath'])
 
 
 def plotDeformedMesh(d, coord, sdConn, opt):
@@ -93,24 +102,21 @@ def plotDeformedMesh(d, coord, sdConn, opt):
     deformed = coord + fct * np.reshape(d, (2, -1), order='F').T
 
     # plot undeformed mesh
-    if 'Undeformed' in opt and len(opt['Undeformed']):
+    if 'Undeformed' in opt and len(opt['Undeformed']) > 0:
         # plotting option of undeformed mesh
         undeformedopt = {'LineSpec': opt['Undeformed']}
         plotSBFEMesh(coord, sdConn, undeformedopt)
 
     plt.title('DEFORMED MESH')
     plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlabel('x')
+    plt.ylabel('y')
 
     # plot deformed mesh
     deformedopt = {'LineSpec': '-'}  # plotting option
     plotSBFEMesh(deformed, sdConn, deformedopt)
 
-    plt.xlabel('x')
-    plt.ylabel('y')
-
     if 'savePath' in opt:
         plt.savefig(opt['savePath'])
-
-    plt.show()
 
     return deformed, fct
