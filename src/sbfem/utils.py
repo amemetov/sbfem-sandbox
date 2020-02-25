@@ -20,6 +20,12 @@ def matlabToPythonIndices(indices):
     raise ValueError("`matlabToPythonIndices` allows only one of the following types of argument: "
                      f"`int`, `list`, `numpy array`. Got {type(indices)}")
 
+
+def plotMultipleText(X, Y, text, **kwargs):
+    for x, y, t in zip(X, Y, text):
+        plt.text(x, y, t, kwargs)
+
+
 def plotSBFEMesh(coord, sdConn, opt):
     """
     The original name: PlotSBFEMesh (p.98)
@@ -53,25 +59,80 @@ def plotSBFEMesh(coord, sdConn, opt):
     LineSPec = '-'
     # use specified LineSpec if present
     if opt is not None:
-        if 'LineSpec' in opt and len(opt['LineSpec']) > 0:
+        if 'LineSpec' in opt and opt['LineSpec'] is not None:
             LineSPec = opt['LineSpec']
-        if 'LineWidth' in opt and len(opt['LineWidth']) > 0:
+        if 'LineWidth' in opt and opt['LineWidth'] is not None:
             LineWidth = opt['LineWidth']
 
     nsd = len(sdConn)  # number of S-elements
 
-    # plot mesh
     meshEdge = np.empty((0, 2), dtype=np.int)
     for isd in range(nsd):
         meshEdge = np.vstack((meshEdge, sdConn[isd]))
 
-    # sort by rows
-    meshEdge = np.sort(meshEdge, axis=1)
+    # TODO: implement
+    # # fill S-elements by treating scaling centre and an edge as a triangle
+    # if 'sdSC' in opt and opt['sdSC']  is not None:
+    #     if 'fill' in opt and opt['fill'] is not None:
+    #         p = np.vstack((coord, opt['sdSC']))  # points
+    #         nNode = coord.shape[0]  # number of nodes
+    #         #  appending scaling centres
+    #         nEdge = cellfun(@length, sdConn)
+    #         #  initilisation of array of scaling centre
+    #         cnt = np.zeros(sum(nEdge))
+    #         ib = 1  #  starting index
+    #         for ii in range(nsd):
+    #             ie = ib-1 + nEdge[ii]  #  ending index
+    #             cnt[ib:ie] = nNode + ii  #  scaling centre
+    #             ib = ie + 1;
+    #         t = [meshEdge cnt]; #  triangles
+    #         patch('Faces',t,'Vertices',p, 'FaceColor',opt.fill,'LineStyle','none');
+
+    # plot mesh
+    meshEdge = np.sort(meshEdge, axis=1)  # sort by rows
     meshEdge = np.unique(meshEdge, axis=0)
 
     X = np.vstack((coord[meshEdge[:, 0], 0].T, coord[meshEdge[:, 1], 0].T))
     Y = np.vstack((coord[meshEdge[:, 0], 1].T, coord[meshEdge[:, 1], 1].T))
-    plt.plot(X, Y, color='green', linestyle=LineSPec, linewidth=LineWidth)
+    plt.plot(X, Y, LineSPec, linewidth=LineWidth)
+
+    # apply plot options
+    if 'MarkerSize' in opt:
+        markersize = opt['MarkerSize']
+    else:
+        markersize = 5
+    if 'sdSC' in opt and opt['sdSC'] is not None:
+        if 'LabelSC' in opt and opt['LabelSC'] is not None:
+            # plot scaling centre
+            plt.plot(opt['sdSC'][:, 0], opt['sdSC'][:, 1], 'r+', markersize=markersize, linewidth=LineWidth)
+            plt.plot(opt['sdSC'][:, 0], opt['sdSC'][:, 1], 'ro', fillstyle='none', markersize=markersize, linewidth=LineWidth)
+            if opt['LabelSC'] > 1:
+                if opt['LabelSC'] > 5:
+                    fontsize = opt['LabelSC']
+                else:
+                    fontsize = 12
+                plotMultipleText(opt['sdSC'][:, 0], opt['sdSC'][:, 1], [' ' + str(x) for x in np.arange(nsd)], color='r', fontsize=fontsize)
+    if 'PlotNode' in opt and opt['PlotNode']:
+        # showing nodes by plotting a circle
+        plt.plot(coord[:, 0], coord[:, 1], 'ko', fillstyle='none', markersize=markersize, linewidth=LineWidth)
+    if 'LabelNode' in opt and opt['LabelNode']:
+        nNode = coord.shape[0]
+        if opt['LabelNode'] > 1:
+            fontsize = opt['LabelNode']
+        else:
+            fontsize = 12
+        # showing nodes by plotting a circle
+        plt.plot(coord[:, 0], coord[:, 1], 'ko', fillstyle='none', markersize=markersize, linewidth=LineWidth)
+        # label nodes with nodal number
+        plotMultipleText(coord[:, 0], coord[:, 1], [' ' + str(x) for x in np.arange(nNode)], fontsize=fontsize)
+    if 'BC_Disp' in opt and opt['BC_Disp'] is not None:
+        # show fixed DOFs by a marker at the nodes
+        Node = opt['BC_Disp'][:, 0]
+        plt.plot(coord[Node, 0], coord[Node, 1], 'b>', fillstyle='none', markersize=8, linewidth=LineWidth)
+    if 'BC_Frc' in opt and opt['BC_Frc'] is not None:
+        # show DOFs carrying external forces by a marker at the nodes
+        Node = opt['BC_Frc'][:, 0]
+        plt.plot(coord[Node, 0], coord[Node, 1], 'm^', fillstyle='none', markersize=8, linewidth=LineWidth);
 
     if 'savePath' in opt:
         plt.savefig(opt['savePath'])
@@ -113,7 +174,7 @@ def plotDeformedMesh(d, coord, sdConn, opt):
     plt.ylabel('y')
 
     # plot deformed mesh
-    deformedopt = {'LineSpec': '-'}  # plotting option
+    deformedopt = {'LineSpec': 'k-'}  # plotting option
     plotSBFEMesh(deformed, sdConn, deformedopt)
 
     if 'savePath' in opt:
