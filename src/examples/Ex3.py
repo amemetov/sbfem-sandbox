@@ -211,3 +211,70 @@ def example_3_5():
         'out': {'d': d, 'F': F}
     }
 
+
+def example_3_6():
+    """
+    Example 3.6 An Edge-cracked Rectangular Body Subject to Tension
+    An edge-cracked rectangular body is shown in Figure 3.8a with the length b = 0.1 m.
+    The base of the body is fixed and a uniform tension p = 1 MPa is applied at the top.
+    The material properties are Young’s modulus E = 10 GPa and Poisson’s ratio ν = 0.25.
+    Plane stress conditions are assumed.
+    Determine the crack opening displacements (CODs).
+    """
+    # Mesh
+    # nodal coordinates in mm. One node per row [x y]
+    b = 0.1
+    coord = b*np.array([[0, 0], [0, -0.5], [0, -1], [0.5, -1], [1, -1], [1.5, -1], [2, -1],
+                        [2, -0.5], [2, 0], [2, 0.5], [2, 1], [1.5, 1], [1, 1], [0.5, 1], [0, 1], [0, 0.5],
+                        [0, 1E-14], [0, -2], [0, -3], [1, -3], [2, -3], [2, -2], [3, -3], [4, -3],
+                        [4, -2], [4, -1], [3, -1], [4, 0], [4, 1], [3, 1], [4, 2], [4, 3], [3, 3],
+                        [2, 3], [2, 2], [1, 3], [0, 3], [0, 2]])
+
+    # Input S-element connectivity as a cell array (One S-element per cell).
+    # In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2]
+    sdConn = [
+        utils.matlabToPythonIndices(np.vstack((np.arange(1, 17), np.arange(2, 18))).T),  # S-element 1
+        utils.matlabToPythonIndices(np.array([[3, 18], [18, 19], [19, 20], [20, 21], [21, 22], [22, 7], [4, 3], [5, 4], [6, 5], [7, 6]])),  # S-element 2
+        utils.matlabToPythonIndices(np.array([[21, 23], [23, 24], [24, 25], [25, 26], [26, 27], [27, 7], [22, 21], [7, 22]])),  # S-element 3
+        utils.matlabToPythonIndices(np.array([[8, 7], [9, 8], [27, 26], [7, 27], [26, 28], [28, 29], [29, 30], [30, 11], [10, 9], [11, 10]])),  # S-element 4
+        utils.matlabToPythonIndices(np.array([[30, 29], [11, 30], [29, 31], [31, 32], [32, 33], [33, 34], [34, 35], [35, 11]])),  # S-element 5
+        utils.matlabToPythonIndices(np.array([[12, 11], [13, 12], [14, 13], [15, 14], [35, 34], [11, 35], [34, 36], [36, 37], [37, 38], [38, 15]]))  # S-element 6
+        ]
+    # coordinates of scaling centres of S-elements, one S-element per row
+    sdSC = b * np.array([[1, 0], [1, -2], [3, -2], [3, 0], [3, 2], [1, 2]])
+
+    # Materials
+    mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10E9, 0.25), den=2000)  # E in Pa, mass density in kg∕m 3
+
+    # Boundary conditions
+    # displacement constraints. One constraint per row: [Node Dir Disp]
+
+    BC_Disp = np.array([[19, 1, 0], [19, 2, 0], [20, 1, 0], [20, 2, 0], [21, 1, 0],
+                        [21, 2, 0], [23, 1, 0], [23, 2, 0], [24, 1, 0], [24, 2, 0]])
+    BC_Disp[:, 0] -= 1  # convert to python indices
+
+    # assemble load vector
+    ndn = 2  # 2 DOFs per node
+    NDof = ndn * coord.shape[0]  # number of DOFs
+    F = np.zeros(NDof)  # initializing right-hand side of equation [K]{u} = {F}
+    edge = utils.matlabToPythonIndices(np.array([[32, 33], [33, 34], [34, 36], [36, 37]]))  # edges subject to traction
+    trac = np.array([[0, 1E6, 0, 1E6]]).T  # all edges have the same traction (in Pa),
+    F = sbfem.addSurfaceTraction(coord, edge, trac, F)
+
+    # solution of S-elements and assemblage of global stiffness and mass matrices
+    sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+
+    # Static solution of nodal displacements and forces
+    d, F = sbfem.solverStatics(K, BC_Disp, F)
+
+    NodalDisp = np.reshape(d, (2, -1), order='F').T
+    # Crack opening displacement
+    COD = NodalDisp[17-1, :] - NodalDisp[1-1, :]
+
+    return {
+        'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
+        'out': {'d': d, 'F': F, 'COD': COD}
+    }
+
+
+

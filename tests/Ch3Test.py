@@ -212,3 +212,11 @@ class Ch3Test(unittest.TestCase):
 
         npt.assert_array_almost_equal(d, expected_d, decimal=4, err_msg=f"Mismatched 'd'")
         npt.assert_array_almost_equal(1.0e-05 * F, expected_F, decimal=4, err_msg=f"Mismatched 'F'")
+
+    def test_example_3_6(self):
+        example = Ex3.example_3_6()
+        COD = example['out']['COD']
+
+        expected_COD = 1.0e-04 * np.array([-0.0046, 0.7827])
+
+        npt.assert_array_almost_equal(COD, expected_COD, decimal=5, err_msg=f"Mismatched 'COD'")
