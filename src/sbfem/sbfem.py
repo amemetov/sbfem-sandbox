@@ -308,7 +308,7 @@ def addSurfaceTraction(coord, edge, trac, F):
     """
 
     if trac.shape[1] == 1:  # expand uniform surface traction to all edges
-        trac = trac[:, np.ones((1, edge.shape[0]))]
+        np.tile(trac, (1, edge.shape[0]))
 
     # equivalent nodal forces
     fmtx = np.array([[2, 0, 1, 0], [0, 2, 0, 1], [1, 0, 2, 0], [0, 1, 0, 2]])  # see Eq.3.49
