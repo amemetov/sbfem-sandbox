@@ -220,3 +220,6 @@ class Ch3Test(unittest.TestCase):
         expected_COD = 1.0e-04 * np.array([-0.0046, 0.7827])
 
         npt.assert_array_almost_equal(COD, expected_COD, decimal=5, err_msg=f"Mismatched 'COD'")
+
+    def test_example_3_7(self):
+        example = Ex3.example_3_7()
