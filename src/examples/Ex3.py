@@ -141,7 +141,7 @@ def example_3_4():
 
     return {
         'in': example,
-        'out': {'d': d, 'F': F}
+        'out': {'d': d, 'F': F, 'sdSln': sdSln}
     }
 
 
@@ -275,6 +275,42 @@ def example_3_6():
         'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
         'out': {'d': d, 'F': F, 'COD': COD}
     }
+
+
+def example_3_7():
+    """
+    Example 3.7 A Rectangular Body Under Uniaxial Tension: Internal Displacements and Stresses
+    The nodal displacements of the problem shown in Figure 3.3, Example 3.3 have been obtained in Example 3.4.
+    Compute the displacements, strains and stresses of S-element 1 at the radial coordinate ξ = 0.5.
+    """
+    example = example_3_4()
+    mat = example['in']['mat']
+    d = example['out']['d']
+    sdSln = example['out']['sdSln']
+
+    # strain modes of S-elements
+    sdStrnMode = sbfem.strainModesOfSElements(sdSln)
+
+    # integration constants
+    sdIntgConst = sbfem.integrationConstsOfSElements(d, sdSln);
+
+    isd = utils.matlabToPythonIndices(1)  # S-element number
+    # display integration constants
+    # [(1:length(sdIntgConst{isd})).T sdIntgConst{isd}]
+    print(sdIntgConst[isd])
+
+    print('strain modes')
+    print(sdStrnMode[isd]['value'])
+    xi = 0.5  # radial coordinate
+    # displacements and strains at specified raidal coordinate
+    nodexy, dsp, strnNode, GPxy, strnEle = sbfem.displacementsAndStrainsOfSelement(xi, sdSln[isd],  sdStrnMode[isd], sdIntgConst[isd])
+    print('  x    y    ux    uy')
+    print(np.hstack((nodexy, (np.reshape(dsp, (2, -1))).T)))
+
+    print('strains of Elements 1 and 2')
+    print(strnEle[:, 0:2])
+    print('stresses of Elements 1 and 2')
+    print(np.matmul(mat.D, strnEle[:, 0:2]))
 
 
 
