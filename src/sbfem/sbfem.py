@@ -371,3 +371,65 @@ def solverStatics(K, BC_Disp, F):
     F = K * d
 
     return d, F
+
+
+def strainModesOfSElements(sdSln):
+    """
+    Original name: SElementStrainMode2NodeEle (p.115)
+    Interal displacements and strain modes of S-elements.
+    :param sdSln: solutions for S-elements
+    :return: strain modes of S-elements
+    """
+    Nsd = len(sdSln)  # number of S-elements
+    sdStrnMode = []  # initialisation of output argument
+    for isd in range(Nsd):  # loop over S-elements
+        # number of DOFs of boundary nodes
+        nd = 2*len(sdSln[isd]['node'])
+        v = sdSln[isd]['v']  # displacement modes
+
+        # Strain modes. The last 2 columns equal 0 (rigid body motions)
+        # number of DOFs excluding 2 translational rigid-body motions
+        nd2 = nd - 2
+        d = sdSln[isd]['d'][:nd2]  # eigenvalues
+
+        # See Eq. (3.66). [Φ(u)b]⟨λb⟩ is computed.
+        # The element values are extracted based on element connectivity
+
+        vb = v[:, :nd2] * np.tile(np.expand_dims(d[:nd2], 1), (1, nd)).T
+
+        n1 = sdSln[isd]['conn'][:, 0]  # first node of all 2-node elements
+        n2 = sdSln[isd]['conn'][:, 1]  # second node of all 2-node elements
+        # LDof(i,:): Local DOFs of nodes of element i in an S-element
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        LDof = np.array([2*n1, 2*n1+1, 2*n2, 2*n2+1]).T
+
+        xy = sdSln[isd]['xy']  # nodal coordinates with origin at scaling centre
+        # dxy(i,:):[Δx, Δy] of i-th element, Eq. (2.50)
+        dxy = xy[n2, :] - xy[n1, :]
+        # mxy(i,:):[x̄, ȳ] of i-th element, Eq. (2.51)
+        mxy = (xy[n2, :] + xy[n1, :]) / 2
+        # a(i): 2|Jb| of i-th element, Eq. (2.57)
+        a = mxy[:, 0] * dxy[:, 1] - mxy[:, 1] * dxy[:, 0]
+
+        ne = len(n1)  # numer of line elements
+        mode = np.zeros((3*ne, nd))  # initializing strain modes
+
+        for ie in range(ne):  # loop over elements at boundary
+            C1 = 0.5 * np.array([[dxy[ie, 1], 0], [0, -dxy[ie, 0]], [-dxy[ie, 0], dxy[ie, 1]]])  # (2.114a)
+            C2 = np.array([[-mxy[ie, 1], 0], [0, mxy[ie, 0]], [mxy[ie, 0], -mxy[ie, 1]]])  # (2.114b)
+            B1 = 1/a[ie] * np.hstack((C1, C1))  # Eq. (3.74a)
+            B2 = 1/a[ie] * np.hstack((-C2, C2))  # Eq. (3.74b)
+            mode[3*ie:3*(ie + 1), :nd2] = np.matmul(B1, vb[LDof[ie, :], :]) + np.matmul(B2, v[LDof[ie, :], :nd2])  # strain modes, Eq (3.66)
+
+
+        # Store the ouput in cell array sdPstP.
+        # The number of S-element isd is the index of the array.
+        # GPxy(ie,:): the coordinates of the Gauss Point of element ie (middle point of 2-node element).
+        # strnMode(:,ie): the strain modes at the Gauss Point of element ie.
+
+        sdStrnMode.append({'xy': mxy, 'value': mode})
+
+    return sdStrnMode
+
