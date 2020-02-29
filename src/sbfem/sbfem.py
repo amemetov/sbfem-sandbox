@@ -433,3 +433,31 @@ def strainModesOfSElements(sdSln):
 
     return sdStrnMode
 
+
+def integrationConstsOfSElements(d, sdSln):
+    """
+    Original name: SElementIntgConst (p.115)
+    Integration constants of S-elements
+    :param d: nodal displacements
+    :param sdSln: solutions for S-elements
+    :return: vector of integration constants
+    """
+    Nsd = len(sdSln)  # total number of S-elements
+    sdIntgConst = []  # initialization of output argument
+    for isd in range(Nsd):  # loop over S-elements
+        # Integration constants
+        # global DOFs of nodes in an S-element
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        dof = np.vstack((2*sdSln[isd]['node'], 2*sdSln[isd]['node'] + 1)).flatten(order='F')
+
+        dsp = d[dof]  # nodal displacements at boundary of S-element
+
+        # the origin code uses matrix left division
+        # which is a solution of Ax = B for x
+        sdIntgConst.append(scipy.sparse.linalg.spsolve(sdSln[isd]['v'], dsp))  # integration constants, see Eq. (3.56)
+
+    return sdIntgConst
+
+
