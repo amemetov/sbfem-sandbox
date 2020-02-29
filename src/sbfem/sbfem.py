@@ -461,3 +461,65 @@ def integrationConstsOfSElements(d, sdSln):
     return sdIntgConst
 
 
+def displacementsAndStrainsOfSelement(xi, sdSln, sdStrnMode, sdIntgConst):
+    """
+    Original name: SElementInDispStrain (p.117)
+    Displacements and strains at specified radial coordinate
+    :param xi: radial coordinate
+    :param sdSln: solutions for S-element
+    :param sdStrnMode: strain modes of S-element
+    :param sdIntgConst: integration constants
+    :return: a tuple (nodexy, dsp, strnNode, GPxy, strnEle)
+            where (All valus are on the scaled boundary, i.e. coodinate line, at specified xi):
+                nodexy(i,:)   - coordinates of node i
+                dsp(i,:)      - nodal displacement funcitons of node i
+                strnNode(:,i) - strains on the radial line of node i
+                GPxy(ie,:)    - coordinates of middle point of element ie
+                strnEle(:,ie) - strains at middle point of element ie
+    """
+
+    # Transform local coordinates (origin at scaling centre) at scaled boundary to global coordinates.
+    # GPxy(ie,:) - coordinates of Gauss point (middle of 2-node element) of element ie after scaling.
+    # nodexy(i,:) - coordinates of node i after scaling.
+
+    GPxy = xi * sdStrnMode['xy'] + sdSln['sc']
+    nodexy = xi * sdSln['xy'] + sdSln['sc']
+
+    if xi > 1.E-16:  # outside of a tiny region around the scaling centre
+        fxi = (xi**sdSln['d']) * sdIntgConst  # ξ⟨λb⟩{c}
+        dsp = np.matmul(sdSln['v'], fxi) # Eq.(3.21a)
+        strnEle = np.matmul(sdStrnMode['value'][:, :-2], fxi[:-2]) / xi  # Eq.(3.67)
+    else:  # at scaling centre
+        dsp = np.matmul(sdSln['v'][:, -1:], sdIntgConst[-1:])  # Eq. (3.57)
+        if(np.min(np.real(sdSln['d'][0: -2])) > 0.999):
+            strnEle = np.matmul(sdStrnMode['value'][:, -5:-2], sdIntgConst[-5:-2])  # Eq. (3.64)
+        else:  # stress singularity at scaling centre
+            strnEle = [float('nan')] * len(sdStrnMode['value'])
+
+    # remove possible tiny imaginary part due to numerical error
+    dsp = np.real(dsp)
+    strnEle = np.real(strnEle)
+
+    # strnEle(1:3,ie) is the strains at centre of element ie after reshaping.
+    strnEle = np.reshape(strnEle, (3, -1), order='F')
+
+    # nodal stresses by averaging element stresses
+    nNode = len(sdSln['node'])  # number of nodes
+    strnNode = np.zeros((3, nNode))  # initialisation
+    # counters of number of elements connected to a node
+    count = np.zeros(nNode)
+    n = sdSln['conn'][:, 0]  # vector of first node of elements
+    # add element stresses to first node of elements
+    strnNode[:, n] += strnEle
+    # increment counters
+    count[n] += 1
+
+    n = sdSln['conn'][:, 1]  # vector of second node of elements
+    # add element stresses to second node of elements
+    strnNode[:, n] += strnEle
+    # increment counters
+    count[n] += 1
+    strnNode = strnNode / count  # averaging
+
+
+    return (nodexy, dsp, strnNode, GPxy, strnEle)
