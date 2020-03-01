@@ -2,6 +2,7 @@ import numpy as np
 import numpy.testing as npt
 import unittest
 import examples.Ex3 as Ex3
+import sbfem.utils as utils
 
 
 class Ch3Test(unittest.TestCase):
@@ -222,4 +223,63 @@ class Ch3Test(unittest.TestCase):
         npt.assert_array_almost_equal(COD, expected_COD, decimal=5, err_msg=f"Mismatched 'COD'")
 
     def test_example_3_7(self):
-        example = Ex3.example_3_7()
+        isd = utils.matlabToPythonIndices(2)  # S-element number
+        xi = 0.5  # radial coordinate
+
+        example = Ex3.example_3_7(isd, xi)
+        mat = example['in']['mat']
+        sdIntgConst = example['out']['sdIntgConst']
+        sdStrnMode = example['out']['sdStrnMode']
+        nodexy = example['out']['nodexy']
+        dsp = example['out']['dsp']
+        strnEle = example['out']['strnEle']
+
+
+        # See the p.119 in the book:
+        # "Note that the integrations constants are not uniquely defined as the eigenvectors are not (see Eq. (3.56))."
+        # That's why MATLAB's result is not equal to numpy's one
+        exp_sdIntCons = np.array([4.75533447741418e-20, -2.1212053798705e-20,
+                                  -3.68555078253867e-05, 1.20378841198638e-05,
+                                  7.19196955563686e-05, -9.69208460605448e-06,
+                                  1.25000000000002e-05, 5e-05])
+
+        # Strain modes are calculated from Displacement modes which are eigenvectors,
+        # so the value can be different depending on platform, algorithm implementation, etc
+
+        # See the p.120 in the book:
+        # "Each strain mode is a vector containing the three strain components at the middle points of the four elements.
+        # Modes 3-6 correspond to linear variations of displacement.
+        # As expected, in each of these four modes, the strains of all the four elements are identical representing a constant strain field."
+        npt.assert_array_almost_equal(sdStrnMode[isd]['value'][:3, 2:6], sdStrnMode[isd]['value'][3:6, 2:6])
+        npt.assert_array_almost_equal(sdStrnMode[isd]['value'][:6, 2:6], sdStrnMode[isd]['value'][6:, 2:6])
+
+        # Check x, y
+        exp_nodexy = np.array([[0.25, 0.25],
+                               [0.25, 0.75],
+                               [0.75, 0.25],
+                               [0.75, 0.75]])
+        npt.assert_array_almost_equal(nodexy, exp_nodexy, err_msg='Mismatched `nodexy`')
+
+        # Check ux, uy
+        exp_dsp = np.array([[1.87500000000002e-05, 2.5e-05],
+                            [1.87500000000002e-05, 7.5e-05],
+                            [6.25000000000009e-06, 2.5e-05],
+                            [6.25000000000019e-06, 7.50000000000001e-05]])
+        npt.assert_array_almost_equal(np.reshape(dsp, (2, -1), order='F').T, exp_dsp, err_msg='Mismatched `dsp`')
+
+        # TODO:
+        print('strains of Elements 1 and 2')
+        print(strnEle[:, 0:2])
+        # -2.50000000000001e-05     -2.50000000000001e-05
+        #                0.0001                    0.0001
+        #  1.66018457661843e-19      3.16790322273108e-19
+
+        # TODO:
+        print('stresses of Elements 1 and 2')
+        print(np.matmul(mat.D, strnEle[:, 0:2]))
+        # -1.47792889038101e-12     -1.08002495835535e-12
+        #                  1000                      1000
+        #  6.64073830647371e-13      1.26716128909243e-12
+
+
+
