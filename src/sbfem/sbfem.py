@@ -460,7 +460,7 @@ def integrationConstsOfSElements(d, sdSln):
 
         # the origin code uses matrix left division
         # which is a solution of Ax = B for x
-        sdIntgConst.append(scipy.sparse.linalg.spsolve(sdSln[isd]['v'], dsp))  # integration constants, see Eq. (3.56)
+        sdIntgConst.append(np.linalg.solve(sdSln[isd]['v'], dsp))  # integration constants, see Eq. (3.56)
 
     return sdIntgConst
 
