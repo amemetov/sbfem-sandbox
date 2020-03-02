@@ -413,8 +413,13 @@ def strainModesOfSElements(sdSln):
         # a(i): 2|Jb| of i-th element, Eq. (2.57)
         a = mxy[:, 0] * dxy[:, 1] - mxy[:, 1] * dxy[:, 0]
 
-        ne = len(n1)  # numer of line elements
-        mode = np.zeros((3*ne, nd))  # initializing strain modes
+        ne = len(n1)  # number of line elements
+
+        # initializing strain modes
+        # create a matrix containing complex numbers
+        # otherwise casting complex values to real discards the imaginary part
+        # and that leads to computing error
+        mode = np.zeros((3*ne, nd), dtype="complex_")
 
         for ie in range(ne):  # loop over elements at boundary
             C1 = 0.5 * np.array([[dxy[ie, 1], 0], [0, -dxy[ie, 0]], [-dxy[ie, 0], dxy[ie, 1]]])  # (2.114a)
@@ -422,7 +427,6 @@ def strainModesOfSElements(sdSln):
             B1 = 1/a[ie] * np.hstack((C1, C1))  # Eq. (3.74a)
             B2 = 1/a[ie] * np.hstack((-C2, C2))  # Eq. (3.74b)
             mode[3*ie:3*(ie + 1), :nd2] = np.matmul(B1, vb[LDof[ie, :], :]) + np.matmul(B2, v[LDof[ie, :], :nd2])  # strain modes, Eq (3.66)
-
 
         # Store the ouput in cell array sdPstP.
         # The number of S-element isd is the index of the array.
