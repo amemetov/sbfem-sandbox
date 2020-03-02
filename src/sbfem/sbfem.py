@@ -394,7 +394,6 @@ def strainModesOfSElements(sdSln):
 
         # See Eq. (3.66). [Φ(u)b]⟨λb⟩ is computed.
         # The element values are extracted based on element connectivity
-
         vb = v[:, :nd2] * np.tile(np.expand_dims(d[:nd2], 1), (1, nd)).T
 
         n1 = sdSln[isd]['conn'][:, 0]  # first node of all 2-node elements
@@ -416,9 +415,12 @@ def strainModesOfSElements(sdSln):
         ne = len(n1)  # number of line elements
 
         # initializing strain modes
-        # create a matrix containing complex numbers
+        # 1) create a matrix containing complex numbers
         # otherwise casting complex values to real discards the imaginary part
         # and that leads to computing error
+        # 2) Each strain mode is a vector containing the three strain components (εx, εy, γxy) at the middle points of the elements.
+        # The number of modes = #DOFS.
+        # The last two modes corresponding to the translational rigid-body motions are equal to 0.
         mode = np.zeros((3*ne, nd), dtype="complex_")
 
         for ie in range(ne):  # loop over elements at boundary
@@ -426,13 +428,11 @@ def strainModesOfSElements(sdSln):
             C2 = np.array([[-mxy[ie, 1], 0], [0, mxy[ie, 0]], [mxy[ie, 0], -mxy[ie, 1]]])  # (2.114b)
             B1 = 1/a[ie] * np.hstack((C1, C1))  # Eq. (3.74a)
             B2 = 1/a[ie] * np.hstack((-C2, C2))  # Eq. (3.74b)
-            mode[3*ie:3*(ie + 1), :nd2] = np.matmul(B1, vb[LDof[ie, :], :]) + np.matmul(B2, v[LDof[ie, :], :nd2])  # strain modes, Eq (3.66)
+            # strain modes, Eq (3.66)
+            mode[3*ie:3*(ie + 1), :nd2] = np.matmul(B1, vb[LDof[ie, :], :]) + np.matmul(B2, v[LDof[ie, :], :nd2])
 
-        # Store the ouput in cell array sdPstP.
-        # The number of S-element isd is the index of the array.
         # GPxy(ie,:): the coordinates of the Gauss Point of element ie (middle point of 2-node element).
         # strnMode(:,ie): the strain modes at the Gauss Point of element ie.
-
         sdStrnMode.append({'xy': mxy, 'value': mode})
 
     return sdStrnMode
