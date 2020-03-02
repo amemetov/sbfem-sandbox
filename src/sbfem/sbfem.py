@@ -371,3 +371,159 @@ def solverStatics(K, BC_Disp, F):
     F = K * d
 
     return d, F
+
+
+def strainModesOfSElements(sdSln):
+    """
+    Original name: SElementStrainMode2NodeEle (p.115)
+    Interal displacements and strain modes of S-elements.
+    :param sdSln: solutions for S-elements
+    :return: strain modes of S-elements
+    """
+    Nsd = len(sdSln)  # number of S-elements
+    sdStrnMode = []  # initialisation of output argument
+    for isd in range(Nsd):  # loop over S-elements
+        # number of DOFs of boundary nodes
+        nd = 2*len(sdSln[isd]['node'])
+        v = sdSln[isd]['v']  # displacement modes
+
+        # Strain modes. The last 2 columns equal 0 (rigid body motions)
+        # number of DOFs excluding 2 translational rigid-body motions
+        nd2 = nd - 2
+        d = sdSln[isd]['d'][:nd2]  # eigenvalues
+
+        # See Eq. (3.66). [Φ(u)b]⟨λb⟩ is computed.
+        # The element values are extracted based on element connectivity
+        vb = v[:, :nd2] * np.tile(np.expand_dims(d[:nd2], 1), (1, nd)).T
+
+        n1 = sdSln[isd]['conn'][:, 0]  # first node of all 2-node elements
+        n2 = sdSln[isd]['conn'][:, 1]  # second node of all 2-node elements
+        # LDof(i,:): Local DOFs of nodes of element i in an S-element
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        LDof = np.array([2*n1, 2*n1+1, 2*n2, 2*n2+1]).T
+
+        xy = sdSln[isd]['xy']  # nodal coordinates with origin at scaling centre
+        # dxy(i,:):[Δx, Δy] of i-th element, Eq. (2.50)
+        dxy = xy[n2, :] - xy[n1, :]
+        # mxy(i,:):[x̄, ȳ] of i-th element, Eq. (2.51)
+        mxy = (xy[n2, :] + xy[n1, :]) / 2
+        # a(i): 2|Jb| of i-th element, Eq. (2.57)
+        a = mxy[:, 0] * dxy[:, 1] - mxy[:, 1] * dxy[:, 0]
+
+        ne = len(n1)  # number of line elements
+
+        # initializing strain modes
+        # 1) create a matrix containing complex numbers
+        # otherwise casting complex values to real discards the imaginary part
+        # and that leads to computing error
+        # 2) Each strain mode is a vector containing the three strain components (εx, εy, γxy) at the middle points of the elements.
+        # The number of modes = #DOFS.
+        # The last two modes corresponding to the translational rigid-body motions are equal to 0.
+        mode = np.zeros((3*ne, nd), dtype="complex_")
+
+        for ie in range(ne):  # loop over elements at boundary
+            C1 = 0.5 * np.array([[dxy[ie, 1], 0], [0, -dxy[ie, 0]], [-dxy[ie, 0], dxy[ie, 1]]])  # (2.114a)
+            C2 = np.array([[-mxy[ie, 1], 0], [0, mxy[ie, 0]], [mxy[ie, 0], -mxy[ie, 1]]])  # (2.114b)
+            B1 = 1/a[ie] * np.hstack((C1, C1))  # Eq. (3.74a)
+            B2 = 1/a[ie] * np.hstack((-C2, C2))  # Eq. (3.74b)
+            # strain modes, Eq (3.66)
+            mode[3*ie:3*(ie + 1), :nd2] = np.matmul(B1, vb[LDof[ie, :], :]) + np.matmul(B2, v[LDof[ie, :], :nd2])
+
+        # GPxy(ie,:): the coordinates of the Gauss Point of element ie (middle point of 2-node element).
+        # strnMode(:,ie): the strain modes at the Gauss Point of element ie.
+        sdStrnMode.append({'xy': mxy, 'value': mode})
+
+    return sdStrnMode
+
+
+def integrationConstsOfSElements(d, sdSln):
+    """
+    Original name: SElementIntgConst (p.115)
+    Integration constants of S-elements
+    :param d: nodal displacements
+    :param sdSln: solutions for S-elements
+    :return: vector of integration constants
+    """
+    Nsd = len(sdSln)  # total number of S-elements
+    sdIntgConst = []  # initialization of output argument
+    for isd in range(Nsd):  # loop over S-elements
+        # Integration constants
+        # global DOFs of nodes in an S-element
+        # for Python        # Original
+        # for ux => 2*i     # 2*i -1
+        # for uy => 2*i + 1 # 2*i
+        dof = np.vstack((2*sdSln[isd]['node'], 2*sdSln[isd]['node'] + 1)).flatten(order='F')
+
+        dsp = d[dof]  # nodal displacements at boundary of S-element
+
+        # the origin code uses matrix left division
+        # which is a solution of Ax = B for x
+        sdIntgConst.append(np.linalg.solve(sdSln[isd]['v'], dsp))  # integration constants, see Eq. (3.56)
+
+    return sdIntgConst
+
+
+def displacementsAndStrainsOfSelement(xi, sdSln, sdStrnMode, sdIntgConst):
+    """
+    Original name: SElementInDispStrain (p.117)
+    Displacements and strains at specified radial coordinate
+    :param xi: radial coordinate
+    :param sdSln: solutions for S-element
+    :param sdStrnMode: strain modes of S-element
+    :param sdIntgConst: integration constants
+    :return: a tuple (nodexy, dsp, strnNode, GPxy, strnEle)
+            where (All valus are on the scaled boundary, i.e. coodinate line, at specified xi):
+                nodexy(i,:)   - coordinates of node i
+                dsp(i,:)      - nodal displacement funcitons of node i
+                strnNode(:,i) - strains on the radial line of node i
+                GPxy(ie,:)    - coordinates of middle point of element ie
+                strnEle(:,ie) - strains at middle point of element ie
+    """
+
+    # Transform local coordinates (origin at scaling centre) at scaled boundary to global coordinates.
+    # GPxy(ie,:) - coordinates of Gauss point (middle of 2-node element) of element ie after scaling.
+    # nodexy(i,:) - coordinates of node i after scaling.
+
+    GPxy = xi * sdStrnMode['xy'] + sdSln['sc']
+    nodexy = xi * sdSln['xy'] + sdSln['sc']
+
+    if xi > 1.E-16:  # outside of a tiny region around the scaling centre
+        fxi = (xi**sdSln['d']) * sdIntgConst  # ξ⟨λb⟩{c}
+        dsp = np.matmul(sdSln['v'], fxi) # Eq.(3.21a)
+        strnEle = np.matmul(sdStrnMode['value'][:, :-2], fxi[:-2]) / xi  # Eq.(3.67)
+    else:  # at scaling centre
+        dsp = np.matmul(sdSln['v'][:, -1:], sdIntgConst[-1:])  # Eq. (3.57)
+        if(np.min(np.real(sdSln['d'][0: -2])) > 0.999):
+            strnEle = np.matmul(sdStrnMode['value'][:, -5:-2], sdIntgConst[-5:-2])  # Eq. (3.64)
+        else:  # stress singularity at scaling centre
+            strnEle = [float('nan')] * len(sdStrnMode['value'])
+
+    # remove possible tiny imaginary part due to numerical error
+    dsp = np.real(dsp)
+    strnEle = np.real(strnEle)
+
+    # strnEle(1:3,ie) is the strains at centre of element ie after reshaping.
+    strnEle = np.reshape(strnEle, (3, -1), order='F')
+
+    # nodal stresses by averaging element stresses
+    nNode = len(sdSln['node'])  # number of nodes
+    strnNode = np.zeros((3, nNode))  # initialisation
+    # counters of number of elements connected to a node
+    count = np.zeros(nNode)
+    n = sdSln['conn'][:, 0]  # vector of first node of elements
+    # add element stresses to first node of elements
+    strnNode[:, n] += strnEle
+    # increment counters
+    count[n] += 1
+
+    n = sdSln['conn'][:, 1]  # vector of second node of elements
+    # add element stresses to second node of elements
+    strnNode[:, n] += strnEle
+    # increment counters
+    count[n] += 1
+    strnNode = strnNode / count  # averaging
+
+
+    return (nodexy, dsp, strnNode, GPxy, strnEle)
