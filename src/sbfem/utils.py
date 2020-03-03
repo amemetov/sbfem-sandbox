@@ -137,6 +137,9 @@ def plotSBFEMesh(coord, sdConn, opt):
     if 'savePath' in opt:
         plt.savefig(opt['savePath'])
 
+    if 'show' in opt and opt['show']:
+        plt.show()
+
 
 def plotDeformedMesh(d, coord, sdConn, opt):
     """
