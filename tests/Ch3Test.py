@@ -286,8 +286,12 @@ class Ch3Test(unittest.TestCase):
         xi = 1  # radial coordinate
 
         example = Ex3.example_3_8(isd, xi)
-        nodalDisp = example['out']['nodalDisp']
+        d = example['out']['d']
         stresses = example['out']['stresses']
+        stresses = example['out']['stresses']
+
+        # nodal displacements
+        nodalDisp = np.reshape(d, (-1, 2))
 
         exp_nodalDisp = np.array([[1.25, 0.0], [0, 0], [0, 0], [0, 0],
                                   [2.5, -0.0], [2.5, 0.0], [0.25, 0.0]])

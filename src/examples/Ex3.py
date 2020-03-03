@@ -367,21 +367,11 @@ def example_3_8(isd, xi):
                      [0, -1, 0, -1]]).T
     F = sbfem.addSurfaceTraction(coord, edge, trac, F)
 
-    # % Plot mesh
-    # plotting options
-    # opt = {'LineSpec': '-k', 'sdSC': sdSC, 'PlotNode': 1, 'LabelNode': 1, 'title': 'MESH', 'show': True}
-    # utils.plotSBFEMesh(coord, sdConn, opt)
-
     # Static solution
     # solution of S-elements and assemblage of global stiffness and mass matrices
     sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
     # Static solution of nodal displacements and forces
     d, F = sbfem.solverStatics(K, BC_Disp, F)
-    # nodal displacements
-    nodalDisp = np.reshape(d, (-1, 2))
-
-    print('Nodal displacements')
-    print(np.hstack((np.expand_dims(np.arange(len(coord), dtype=np.int), axis=1), nodalDisp)))
 
     # Stresses
     # strain modes of S-elements
@@ -390,14 +380,12 @@ def example_3_8(isd, xi):
     sdIntgConst = sbfem.integrationConstsOfSElements(d, sdSln)
     # displacements and strains at specified radial coordinate
     nodexy, dsp, strnNode, GPxy, strnEle = sbfem.displacementsAndStrainsOfSelement(xi, sdSln[isd], sdStrnMode[isd], sdIntgConst[isd])
-
-    print('Stresses of Elements 1 and 2')
+    # compute stresses Eq. (A.11)
     stresses = np.matmul(mat.D, strnEle)
-    print(stresses[:, :2])
 
     return {'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
             'out': {
-                'nodalDisp': nodalDisp,
+                'd': d,
                 'sdStrnMode': sdStrnMode, 'sdIntgConst': sdIntgConst,
                 'nodexy': nodexy, 'dsp': dsp, 'strnNode': strnNode,
                 'GPxy': GPxy, 'strnEle': strnEle,
