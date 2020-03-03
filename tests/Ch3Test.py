@@ -281,5 +281,22 @@ class Ch3Test(unittest.TestCase):
         stresses = np.matmul(mat.D, strnEle)
         npt.assert_array_almost_equal(stresses, exp_stresses, decimal=3, err_msg='Mismatched `stresses`')
 
+    def test_example_3_8(self):
+        isd = utils.matlabToPythonIndices(2)  # S - element number
+        xi = 1  # radial coordinate
 
+        example = Ex3.example_3_8(isd, xi)
+        d = example['out']['d']
+        stresses = example['out']['stresses']
+        stresses = example['out']['stresses']
+
+        # nodal displacements
+        nodalDisp = np.reshape(d, (-1, 2))
+
+        exp_nodalDisp = np.array([[1.25, 0.0], [0, 0], [0, 0], [0, 0],
+                                  [2.5, -0.0], [2.5, 0.0], [0.25, 0.0]])
+        npt.assert_array_almost_equal(nodalDisp, exp_nodalDisp, decimal=4, err_msg='Mismatched `nodalDisp`')
+
+        exp_stresses = np.tile(np.expand_dims([0, 0, 1], axis=1), 6)
+        npt.assert_array_almost_equal(stresses, exp_stresses, decimal=5, err_msg='Mismatched `stresses`')
 

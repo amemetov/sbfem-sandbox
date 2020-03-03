@@ -282,6 +282,8 @@ def example_3_7(isd, xi):
     Example 3.7 A Rectangular Body Under Uniaxial Tension: Internal Displacements and Stresses
     The nodal displacements of the problem shown in Figure 3.3, Example 3.3 have been obtained in Example 3.4.
     Compute the displacements, strains and stresses of S-element 1 at the radial coordinate ξ = 0.5.
+    :param isd:  # S-element number
+    :param xi:  # radial coordinate
     """
     example = example_3_4()
     mat = example['in']['mat']
@@ -305,3 +307,88 @@ def example_3_7(isd, xi):
     # merge dicts out1 and out2
     out = {**out1, **out2}
     return {'in': example['in'], 'out': out}
+
+def example_3_8(isd, xi):
+    """
+    Example 3.8 Patch Test on Distorted Polygon S-elements
+    A patch test on a unit square shown in Figure 3.10a is performed.
+    :param isd:  # S-element number
+    :param xi:  # radial coordinate
+    """
+    # Mesh
+    # nodal coordinates. One node per row [x y]
+    x1, y1 = 0.5, 0.5  # Figure b
+    # x1, y1 = 0.05, 0.95  # Figure c
+    coord = np.array([[x1, y1], [0, 0], [0.1, 0], [1, 0], [1, 1], [0, 1], [0, 0.1]])
+    # Input S-element connectivity as a cell array (One S-element per cell).
+    # In a cell, the connectivity of line elements is given by one element per row
+    # [Node-1 Node-2].
+    sdConn = [
+        utils.matlabToPythonIndices(np.array([[1, 7], [7, 2], [2, 3], [3, 1]])),  # S-element 1
+        utils.matlabToPythonIndices(np.array([[1, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 1]]))    # S-element 2
+    ]
+
+    # coordinates of scaling centres of S-elements.
+    if x1 > y1:  # extension of line 21 intersecting right edge of the square
+        sdSC = np.array([[x1/2, y1/2], [(1+x1)/2, y1*(1+x1)/(2*x1)]])
+    else:  # extension of line 21 intersecting top edge of the square
+        sdSC = np.array([[x1/2, y1/2], [x1*(1+y1)/(2*y1), (1+y1)/2]])
+
+    # Materials
+    mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(1, 0.25), den=2)
+
+    # Boundary conditions
+    # displacement constrains. One constrain per row: [Node Dir Disp]
+    BC_Disp = np.array([
+        [utils.matlabToPythonIndices(2), 1, 0],
+        [utils.matlabToPythonIndices(2), 2, 0],
+        [utils.matlabToPythonIndices(4), 2, 0]
+    ])
+    # assemble load vector
+    ndn = 2  # 2 DOFs per node
+    NDof = ndn * len(coord)  # number of DOFs
+    F = np.zeros(NDof)  # initializing right-hand side of equation [K]{u} = {F}
+
+    # horizontal tension
+    # edge = [ 4 5; 6 7; 7 2];
+    # trac = [1 0 1 0; -1 0 -1 0; -1 0 -1 0]’;
+    # vertical tension
+    # edge = [2 3; 3 4; 5 6];
+    # trac = [0 -1 0 -1; 0 -1 0 -1; 0 1 0 1]’;
+    # pure shear
+    # edges subject to tractions, one row per edge
+    edge = utils.matlabToPythonIndices(np.array([[2, 3], [3, 4], [4, 5], [5, 6], [6, 7], [7, 2]]))
+    # tractions, one column per edge
+    trac = np.array([[-1, 0, -1, 0],
+                     [-1, 0, -1, 0],
+                     [0, 1, 0, 1],
+                     [1, 0, 1, 0],
+                     [0, -1, 0, -1],
+                     [0, -1, 0, -1]]).T
+    F = sbfem.addSurfaceTraction(coord, edge, trac, F)
+
+    # Static solution
+    # solution of S-elements and assemblage of global stiffness and mass matrices
+    sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+    # Static solution of nodal displacements and forces
+    d, F = sbfem.solverStatics(K, BC_Disp, F)
+
+    # Stresses
+    # strain modes of S-elements
+    sdStrnMode = sbfem.strainModesOfSElements(sdSln)
+    # integration constants
+    sdIntgConst = sbfem.integrationConstsOfSElements(d, sdSln)
+    # displacements and strains at specified radial coordinate
+    nodexy, dsp, strnNode, GPxy, strnEle = sbfem.displacementsAndStrainsOfSelement(xi, sdSln[isd], sdStrnMode[isd], sdIntgConst[isd])
+    # compute stresses Eq. (A.11)
+    stresses = np.matmul(mat.D, strnEle)
+
+    return {'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
+            'out': {
+                'd': d,
+                'sdStrnMode': sdStrnMode, 'sdIntgConst': sdIntgConst,
+                'nodexy': nodexy, 'dsp': dsp, 'strnNode': strnNode,
+                'GPxy': GPxy, 'strnEle': strnEle,
+                'stresses': stresses}
+            }
+
