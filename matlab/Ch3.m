@@ -182,6 +182,122 @@ classdef Ch3
             disp('Stresses of Elements 1 and 2')
             mat.D*strnEle(:,1:2)
         end
+        
+        function [] = example_3_9()
+            clearvars; close all; dbstop if error
+            
+            %% Input
+            R = 1; % radius of circular body
+            p = 1000; % radial surface traction (KPa)
+            E = 10E6; % E in KPa
+            nu = 0.25; % Poisson’s ratio
+            den = 2; %mass density in Mg∕m 3
+            
+            a = 0.75*R; % crack length
+            nq = 4; % number of elements on one quadrant
+            
+            %% Mesh
+            % nodal coordinates. One node per row [x, y]
+            n = 4*nq; % number of element on boundary
+            dangle = 2*pi/n; % angular increment of an element Δ θ
+            angle = -pi:dangle:pi+dangle/5; % angular coordinates of nodes
+            % Note: there are two nodes at crack mouth with the same coordinates
+            % nodal coordinates x = R cos(θ), y = R sin(θ)
+            coord = R*[cos(angle);sin(angle)]';
+            
+            % Input S-element connectivity as a cell array (one S-element per cell). 
+            % In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2].
+            sdConn = { [1:n; 2:n+1]' };
+            % Note: elements form an open loop
+            % select scaling centre at crack tip
+            sdSC = [a-R 0];
+            
+            %% Materials
+            % E: Young’s modulus; p: Poisson’s ratio
+            ElasMtrx = @(E, p) E/(1-p^2)*[1 p 0;p 1 0;0 0 (1-p)/2];
+            mat.D = ElasMtrx(E, nu);
+            mat.den = den;
+            
+            %% Boundary conditions
+            % displacement constraints. One constraint per row: [Node Dir Disp]
+            BC_Disp = [ nq+1 1 0; 2*nq+1 2 0; 3*nq+1 1 0]; % constrain rigid-body motion
+            eleF = R*dangle*p; % resultant radial force on an element pRΔ θ
+            % assemble radial nodal forces {F r }
+            nodalF = [eleF/2, eleF*ones(1,n-1), eleF/2];
+            % nodal forces. One node per row: [Node Dir F]
+            % F_x = F_r*cos(θ), F_y = F_r*sin(θ)            
+            BC_Frc = [1:n+1 1:n+1; ones(1,n+1) 2*ones(1,n+1); ...
+                nodalF.*cos(angle) nodalF.*sin(angle)]';
+            
+            %% Plot mesh
+            h1 = figure;
+            opt=struct('LineSpec','-k', 'sdSC',sdSC, ... 
+                'PlotNode',1, 'LabelNode', 1,...
+                'BC_Disp',BC_Disp); % plotting options
+            PlotSBFEMesh(coord, sdConn, opt);
+            title('MESH');
+            
+            % solution of S-elements and global stiffness and mass matrices
+            [sdSln, K, M] = SBFEMAssembly(coord, sdConn, sdSC, mat);
+            
+            %% Assemblage external forces
+            ndn = 2; % 2 DOFs per node
+            NDof = ndn*size(coord,1); % number of DOFs            
+            F = zeros(NDof,1); % initializing right-hand side of equation [K]{u} = {F}
+            F = AddNodalForces(BC_Frc, F); % add prescribed nodal forces
+            
+            %% Static solution
+            [U, F] = SolverStatics(K, BC_Disp, F);
+            
+            CODnorm = (U(end)-U(2))*E/(p*R);
+            disp(['Normalised crack openning displacement = ', num2str(CODnorm)])
+            
+            % plot deformed shape
+            Umax = max(abs(U)); % maximum displacement
+            fct = 0.2/Umax; % factor to magnify the displacement to 0.2 m argument nodal coordinates
+            deformed = coord + fct*(reshape(U,2,[]))';
+            hold on
+            
+            % plotting options
+            opt = struct('LineSpec','-ro', 'LabelNode', 1);
+            PlotSBFEMesh(deformed, sdConn, opt);
+            title('DEFORMED MESH');
+            
+            %% Internal displacements and stresses
+            % strain modes of S-elements
+            sdStrnMode = SElementStrainMode2NodeEle( sdSln );
+            % integration constants of S-element
+            sdIntgConst = SElementIntgConst( U, sdSln );
+            
+            isd = 1; % S-element number
+            xi = (1:-0.01:0).^2; % radial coordinates
+            
+            % initialization of variables for plotting
+            X = zeros(length(xi), length(sdSln{isd}.node));
+            Y = X; C = X;
+            % displacements and strains at the specified radial coordinate
+            for ii= 1:length(xi)
+                [nodexy, dsp, strnNode, GPxy, strnEle] = ...
+                    SElementInDispStrain(xi(ii), sdSln{isd}, ...
+                        sdStrnMode{isd}, sdIntgConst{isd});
+                deformed = nodexy + fct*(reshape(dsp,2,[]))';
+                % coordinates of grid points
+                X(ii,:) = deformed(:,1)';
+                Y(ii,:) = deformed(:,2)';
+                strsNode = mat.D*strnNode; % nodal stresses
+                C(ii,:) = strsNode(2,:); % store σ_yy for plotting
+            end
+            
+            % plot stress contour
+            h2 = figure('Color','white');
+            contourf(X,Y,C, (-1000:1000:10000), 'LineStyle','none');
+            
+            hold on
+            axis off; axis equal;
+            xlabel('x'); ylabel('x');
+            colormap(jet);colorbar;
+            
+        end
     end
 end
 
