@@ -183,4 +183,7 @@ def plotDeformedMesh(d, coord, sdConn, opt):
     if 'savePath' in opt:
         plt.savefig(opt['savePath'])
 
+    if 'show' in opt and opt['show']:
+        plt.show()
+
     return deformed, fct
