@@ -195,6 +195,10 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
     # store solutions for S-elements
     sdSln = []
 
+    if len(sdSC.shape) == 1:
+        # add row dim
+        sdSC = np.expand_dims(sdSC, axis=0)
+
     # loop over S-elements
     for isd in range(Nsd):
         # sdNode contains global nodal numbers of the nodes in an S-element.
@@ -248,10 +252,10 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
 
         # store stiffness, row and column indices
         EndInd = StartInd + Ndof**2 # ending position
-        K[StartInd:EndInd] = sln['K'].flatten()
-        M[StartInd:EndInd] = sln['M'].flatten()
-        Ki[StartInd:EndInd] = sdI.flatten()
-        Kj[StartInd:EndInd] = sdJ.flatten()
+        K[StartInd:EndInd] = sln['K'].flatten(order='F')
+        M[StartInd:EndInd] = sln['M'].flatten(order='F')
+        Ki[StartInd:EndInd] = sdI.flatten(order='F')
+        Kj[StartInd:EndInd] = sdJ.flatten(order='F')
 
         StartInd = EndInd  # increment the starting position
 
@@ -260,7 +264,7 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
     # ensure symmetry
     K = (K+K.T)/2
     # form global mass matrix in sparse storage
-    M = sparse_matrix((M, (Ki,Kj)))
+    M = sparse_matrix((M, (Ki, Kj)))
     # ensure symmetry
     M = (M+M.T)/2
 
@@ -357,7 +361,7 @@ def solverStatics(K, BC_Disp, F):
         # remove constrained DOFs
         # FDofs[CDofs] = []
         FDofs = np.delete(FDofs, CDofs)
-        F = F - K[:,CDofs]*BC_Disp[:, 2]  # Eq. (3.52)
+        F = F - K[:, CDofs] * BC_Disp[:, 2]  # Eq. (3.52)
         # store prescribed displacements
         d[CDofs] = BC_Disp[:, 2]
 
