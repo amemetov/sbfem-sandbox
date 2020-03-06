@@ -392,3 +392,94 @@ def example_3_8(isd, xi):
                 'stresses': stresses}
             }
 
+def example_3_9():
+    """
+    Example 3.9 Edge-cracked Circular Body
+    A circular body under uniform radial tension p is shown in Figure 3.11a.
+    A crack of length a exists at the left edge.
+    The material constants are Young’s modulus E, and Poisson’s ratio ν = 0.25. Assume plane stress condition.
+    Determine the crack opening displacement (COD) Δu_y at left edge.
+    """
+    # Input
+    R = 1  # radius of circular body
+    p = 1000  # radial surface traction (KPa)
+    E = 10E6  # E in KPa
+    nu = 0.25  # Poisson’s ratio
+    den = 2  # mass density in Mg∕m 3
+
+    a = 0.75*R  # crack length
+    nq = 4  # number of elements on one quadrant
+
+    # Mesh
+    # nodal coordinates. One node per row [x, y]
+    n = 4*nq  # number of element on boundary
+    dangle = 2*math.pi/n  # angular increment of an element Δ θ
+    angle = np.arange(-math.pi, math.pi+dangle/5, dangle)  # angular coordinates of nodes
+    # Note: there are two nodes at crack mouth with the same coordinates
+    # nodal coordinates x = R cos(θ), y = R sin(θ)
+    coord = R*np.vstack((np.cos(angle), np.sin(angle))).T
+
+    # Input S-element connectivity as a cell array (one S-element per cell).
+    # In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2].
+    sdConn = [ np.vstack((np.arange(0, n), np.arange(1, n+1))).T ]
+    # Note: elements form an open loop
+    # select scaling centre at crack tip
+    sdSC = np.array([a-R, 0])
+
+    # Materials
+    mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(E, nu), den=den)
+
+    # Boundary conditions
+    # displacement constraints. One constraint per row: [Node Dir Disp]
+    BC_Disp = np.array([[utils.matlabToPythonIndices(nq+1), 1, 0],
+                        [utils.matlabToPythonIndices(2*nq+1), 2, 0],
+                        [utils.matlabToPythonIndices(3*nq+1), 1, 0]])  # constrain rigid-body motion
+    eleF = R*dangle*p  # resultant radial force on an element pRΔ_θ
+    # assemble radial nodal forces {F_r}
+    nodalF = np.hstack((eleF/2, eleF*np.ones(n-1), eleF/2))
+    # nodal forces. One node per row: [Node Dir F]
+    # F_x = F_r*cos(θ), F_y = F_r*sin(θ)
+    BC_Frc = np.vstack((
+                np.hstack((np.arange(0, n+1), np.arange(0, n+1))),
+                np.hstack((np.ones(n+1), 2*np.ones(n+1))),
+                np.hstack((nodalF*np.cos(angle), nodalF*np.sin(angle)))
+    )).T
+
+    # Plot mesh
+    # opt = {'LineSpec':'-k', 'sdSC':sdSC, 'PlotNode':1, 'LabelNode':1, 'BC_Disp':BC_Disp, 'title':'MESH', 'show':True}  # plotting options
+    # utils.plotSBFEMesh(coord, sdConn, opt)
+
+    # % solution of S-elements and global stiffness and mass matrices
+    sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+
+    # Assemblage external forces
+    ndn = 2  # 2 DOFs per node
+    NDof = ndn*len(coord)  # number of DOFs
+    F = np.zeros(NDof)  # initializing right-hand side of equation [K]{u} = {F}
+    F = sbfem.addNodalForces(BC_Frc, F)  # add prescribed nodal forces
+
+    # Static solution
+    U, F = sbfem.solverStatics(K, BC_Disp, F)
+
+    CODnorm = (U[-1]-U[1])*E/(p*R)
+    print(['Normalised crack openning displacement = ' + str(CODnorm)])
+
+    Uxy = np.reshape(U, (2, -1), order='F').T
+    print('Uxy:')
+    print(Uxy)
+
+    # plot deformed shape
+    # plotting options
+    opt = {'MagnFct': 0.2, 'Undeformed': 'b--', 'show':True}
+    utils.plotDeformedMesh(U, coord, sdConn, opt)
+
+    return {'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
+            'out': {
+                'd': U,
+                # 'sdStrnMode': sdStrnMode, 'sdIntgConst': sdIntgConst,
+                # 'nodexy': nodexy, 'dsp': dsp, 'strnNode': strnNode,
+                # 'GPxy': GPxy, 'strnEle': strnEle,
+                # 'stresses': stresses
+            }
+            }
+
