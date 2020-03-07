@@ -187,3 +187,19 @@ def plotDeformedMesh(d, coord, sdConn, opt):
         plt.show()
 
     return deformed, fct
+
+
+def plotStressContour(X, Y, C, levels=None, cmap='jet', opt=None):
+    if opt is None:
+        opt = dict()
+
+    cs = plt.contourf(X, Y, C, levels=levels, cmap=cmap)
+    cbar = plt.colorbar(cs)
+
+    if 'savePath' in opt:
+        plt.savefig(opt['savePath'])
+
+    if 'show' in opt and opt['show']:
+        plt.show()
+
+    plt.show()
