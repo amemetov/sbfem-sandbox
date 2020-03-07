@@ -317,5 +317,5 @@ class Ch3Test(unittest.TestCase):
         ])
         npt.assert_array_almost_equal(nodalDisp, expected_nodalDisp, decimal=3, err_msg="Mismatched 'nodalDisp'")
 
-        # check CODnorm - dimensionless crack opening displacements (Δu y E∕pR)
+        # check CODnorm - dimensionless crack opening displacements (Δu*y*E∕p*R)
         self.assertAlmostEqual(CODnorm, 11.2226, places=4, msg="Mismatched `CODnorm`")

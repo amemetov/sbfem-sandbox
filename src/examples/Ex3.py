@@ -392,13 +392,15 @@ def example_3_8(isd, xi):
                 'stresses': stresses}
             }
 
-def example_3_9():
+def example_3_9(nq=4, magnFct=0.2):
     """
     Example 3.9 Edge-cracked Circular Body
     A circular body under uniform radial tension p is shown in Figure 3.11a.
     A crack of length a exists at the left edge.
     The material constants are Young’s modulus E, and Poisson’s ratio ν = 0.25. Assume plane stress condition.
     Determine the crack opening displacement (COD) Δu_y at left edge.
+    :param nq:  # number of elements on one quadrant
+    :param magnFct: magnification factor of deformed mesh
     """
     # Input
     R = 1  # radius of circular body
@@ -408,7 +410,6 @@ def example_3_9():
     den = 2  # mass density in Mg∕m 3
 
     a = 0.75*R  # crack length
-    nq = 4  # number of elements on one quadrant
 
     # Mesh
     # nodal coordinates. One node per row [x, y]
@@ -462,12 +463,6 @@ def example_3_9():
     U, F = sbfem.solverStatics(K, BC_Disp, F)
 
     CODnorm = (U[-1]-U[1])*E/(p*R)
-    print(['Normalised crack openning displacement = ' + str(CODnorm)])
-
-    # plot deformed shape
-    # plotting options
-    # opt = {'MagnFct': 0.2, 'Undeformed': 'b--', 'show':True}
-    # utils.plotDeformedMesh(U, coord, sdConn, opt)
 
     # Internal displacements and stresses
     # strain modes of S-elements
@@ -479,7 +474,7 @@ def example_3_9():
     xi = np.arange(1, 0-1E-5, -0.01)**2  # radial coordinates
 
     Umax = np.max(np.abs(U))  # maximum displacement
-    fct = 0.2 / Umax  # factor to magnify the displacement to 0.2 m argument nodal coordinates
+    fct = magnFct / Umax  # factor to magnify the displacement to 0.2 m argument nodal coordinates
 
     # % initialization of variables for plotting
     X = np.zeros((len(xi), len(sdSln[isd]['node'])))
@@ -488,22 +483,12 @@ def example_3_9():
     # displacements and strains at the specified radial coordinate
     for ii in range(len(xi)):
         nodexy, dsp, strnNode, GPxy, strnEle = sbfem.displacementsAndStrainsOfSelement(xi[ii], sdSln[isd], sdStrnMode[isd], sdIntgConst[isd])
-        deformed = nodexy + fct * (np.reshape(dsp, (2, -1))).T
+        deformed = nodexy + fct * (np.reshape(dsp, (2, -1), order='F')).T
         # coordinates of grid points
         X[ii, :] = deformed[:, 0].T
         Y[ii, :] = deformed[:, 1].T
         strsNode = np.matmul(mat.D, strnNode)  # nodal stresses
         C[ii, :] = strsNode[1, :]  # store σ_yy for plotting
 
-
-
     return {'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
-            'out': {
-                'nodalDisp': U, 'CODnorm': CODnorm
-                # 'sdStrnMode': sdStrnMode, 'sdIntgConst': sdIntgConst,
-                # 'nodexy': nodexy, 'dsp': dsp, 'strnNode': strnNode,
-                # 'GPxy': GPxy, 'strnEle': strnEle,
-                # 'stresses': stresses
-            }
-            }
-
+            'out': {'nodalDisp': U, 'CODnorm': CODnorm, 'X': X, 'Y': Y, 'C': C}}
