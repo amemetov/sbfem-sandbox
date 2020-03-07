@@ -464,18 +464,42 @@ def example_3_9():
     CODnorm = (U[-1]-U[1])*E/(p*R)
     print(['Normalised crack openning displacement = ' + str(CODnorm)])
 
-    Uxy = np.reshape(U, (2, -1), order='F').T
-    print('Uxy:')
-    print(Uxy)
-
     # plot deformed shape
     # plotting options
-    opt = {'MagnFct': 0.2, 'Undeformed': 'b--', 'show':True}
-    utils.plotDeformedMesh(U, coord, sdConn, opt)
+    # opt = {'MagnFct': 0.2, 'Undeformed': 'b--', 'show':True}
+    # utils.plotDeformedMesh(U, coord, sdConn, opt)
+
+    # Internal displacements and stresses
+    # strain modes of S-elements
+    sdStrnMode = sbfem.strainModesOfSElements(sdSln)
+    # integration constants of S-element
+    sdIntgConst = sbfem.integrationConstsOfSElements(U, sdSln)
+
+    isd = utils.matlabToPythonIndices(1)  # S-element number
+    xi = np.arange(1, 0-1E-5, -0.01)**2  # radial coordinates
+
+    Umax = np.max(np.abs(U))  # maximum displacement
+    fct = 0.2 / Umax  # factor to magnify the displacement to 0.2 m argument nodal coordinates
+
+    # % initialization of variables for plotting
+    X = np.zeros((len(xi), len(sdSln[isd]['node'])))
+    Y = np.zeros_like(X)
+    C = np.zeros_like(X)
+    # displacements and strains at the specified radial coordinate
+    for ii in range(len(xi)):
+        nodexy, dsp, strnNode, GPxy, strnEle = sbfem.displacementsAndStrainsOfSelement(xi[ii], sdSln[isd], sdStrnMode[isd], sdIntgConst[isd])
+        deformed = nodexy + fct * (np.reshape(dsp, (2, -1))).T
+        # coordinates of grid points
+        X[ii, :] = deformed[:, 0].T
+        Y[ii, :] = deformed[:, 1].T
+        strsNode = np.matmul(mat.D, strnNode)  # nodal stresses
+        C[ii, :] = strsNode[1, :]  # store σ_yy for plotting
+
+
 
     return {'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp},
             'out': {
-                'd': U,
+                'nodalDisp': U, 'CODnorm': CODnorm
                 # 'sdStrnMode': sdStrnMode, 'sdIntgConst': sdIntgConst,
                 # 'nodexy': nodexy, 'dsp': dsp, 'strnNode': strnNode,
                 # 'GPxy': GPxy, 'strnEle': strnEle,
