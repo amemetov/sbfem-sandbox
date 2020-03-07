@@ -296,7 +296,77 @@ classdef Ch3
             axis off; axis equal;
             xlabel('x'); ylabel('x');
             colormap(jet);colorbar;
+        end
+        
+        function [] = example_3_10()
+            % Shape function of a pentagon S-Element
+            clearvars; close all;
             
+            % Mesh
+            % nodal coordinates
+            coord = [cosd(-126:72:180);sind(-126:72:180)]';
+            % ... connectivity
+            sdConn = { [1:5 ; 2:5 1]' };
+            sdSC = [ 0 0]; % one S-Element per row
+            
+            % Materials
+            % E: Young’s modulus; p: Poisson’s ratio
+            ElasMtrx = @(E, p) E/(1-p^2)*[1 p 0;p 1 0;0 0 (1-p)/2];
+            mat.D = ElasMtrx(10E6, 0.25); % E in KPa
+            mat.den = 2; % mass density in Mg∕m 3
+            
+            % S-Element solution
+            [sdSln, K, M] = SBFEMAssembly(coord, sdConn, sdSC, mat);
+            
+            %%  Shape function
+            % prescribed unit displacement
+            U = zeros(size(K,1),1);
+            U(2*4) = 1;
+            
+            % strain modes of S-element
+            sdStrnMode = SElementStrainMode2NodeEle( sdSln );
+            
+            % integration constants
+            sdIntgConst = SElementIntgConst( U, sdSln );
+            
+            isd = 1; % S-element number
+            xi = 1:-0.01:0; % radial coordinates
+            % initialization of variables for plotting
+            X = zeros(length(xi), length(sdSln{isd}.node)+1);
+            Y = X; Z = X;
+            % displacements and strains at the specified radial coordinate
+            for ii= 1:length(xi)
+                [nodexy, dsp, strnNode, GPxy, strnEle] = ...
+                SElementInDispStrain(xi(ii), sdSln{isd}, ...
+                sdStrnMode{isd}, sdIntgConst{isd});
+                % coordinates of grid points forming a close loop
+                X(ii,:) = [nodexy(:,1)' nodexy(1,1)];
+                Y(ii,:) = [nodexy(:,2)' nodexy(1,2)];
+                Z(ii,:) = [dsp(2:2:end)' dsp(2)]; % store u y for plotting
+            end
+            
+            % ... plot the shape function as a surface
+            figure('Color','white')
+            surf(X,Y,Z,'FaceColor','interp', 'EdgeColor','none', 'FaceLighting','phong');
+            view(-110, 15); % set direction of viewing
+            hold on
+            text(1.1*(coord(:,1)-0.02), 1.1*coord(:,2), ...
+            Z(1,1:end-1)'+0.05,int2str((1:5)')); % label the nodes
+            axis equal, axis off;
+            xlabel('x'); ylabel('y'); zlabel('N'); % label the axes
+            colormap(jet)
+            plot3(X(1,:), Y(1,:), Z(1,:), '-b'); % plot edges
+            
+            % contour of the shape function
+            h = figure('Color','white');
+            contourf(X,Y,Z,10, 'LineStyle','none'); % 10 contour lines
+            hold on
+            text(1.05*(coord(:,1)-0.02), 1.05*coord(:,2),int2str((1:5)'));
+            axis equal; axis off;
+            % show a colourbar indicating the value of the shape function
+            colormap(jet)
+            caxis([0 1]); colorbar;
+            plot(X(1,:), Y(1,:), '-b'); % plot edges
         end
     end
 end
