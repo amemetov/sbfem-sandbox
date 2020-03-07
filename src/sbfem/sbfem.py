@@ -161,7 +161,7 @@ def sbfem(E0, E1, E2, M0):
     K = np.real(v[nd:, :].dot(v11inv))
 
     # mass matrix
-    M0 = v11.T.dot(M0).dot(v11) # Eq. (3.103)
+    M0 = v11.T.dot(M0).dot(v11)  # Eq. (3.103)
     # am is a square matrix with all columns being the vector of eigenvalues
     # The entry (i, j) equals λ_i.
     # The entry (i, j) of am' equals λ_j
@@ -203,10 +203,10 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
     for isd in range(Nsd):
         # sdNode contains global nodal numbers of the nodes in an S-element.
         # Vector ic maps the global connectivity to the local connectivity of the S-element
-        sdNode, ic = np.unique(sdConn[isd].flatten(), return_inverse=True) # remove duplicates
+        sdNode, ic = np.unique(sdConn[isd].flatten(), return_inverse=True)  # remove duplicates
         xy = coord[sdNode]  # nodal coordinates
         # transform coordinate origin to scaling centre
-        xy = xy - sdSC[isd]
+        xy = xy - sdSC[isd, :]  # add column indexes too to be sure that number of columns are equal (xy and sdSC)
         # line element connectivity in local nodal numbers of an S-element
         LConn = np.reshape(ic, sdConn[isd].shape)
         # compute S-element coefficient matrices
@@ -251,7 +251,7 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
         sdJ = sdI.T
 
         # store stiffness, row and column indices
-        EndInd = StartInd + Ndof**2 # ending position
+        EndInd = StartInd + Ndof**2  # ending position
         K[StartInd:EndInd] = sln['K'].flatten(order='F')
         M[StartInd:EndInd] = sln['M'].flatten(order='F')
         Ki[StartInd:EndInd] = sdI.flatten(order='F')
@@ -316,7 +316,7 @@ def addSurfaceTraction(coord, edge, trac, F):
 
     # equivalent nodal forces
     fmtx = np.array([[2, 0, 1, 0], [0, 2, 0, 1], [1, 0, 2, 0], [0, 1, 0, 2]])  # see Eq.3.49
-    edgeLen = np.sqrt(np.sum((coord[edge[:, 1], :] -  coord[edge[:,0], :])**2, 1))  # edge length
+    edgeLen = np.sqrt(np.sum((coord[edge[:, 1], :] - coord[edge[:, 0], :])**2, 1))  # edge length
     nodalF = 1/6*np.matmul(fmtx, trac)*np.tile(np.expand_dims(edgeLen, 1), (1, 4)).T  # Eq. (3.49)
 
     # assembly of nodal forces
@@ -368,7 +368,6 @@ def solverStatics(K, BC_Disp, F):
     # displacement of free DOFs, see Eq. (3.53)
     # the origin code uses matrix left division
     # which is a solution of Ax = B for x
-    # for numpy: linalg.solve(a,b) if a is square; linalg.lstsq(a,b) otherwise
     d[FDofs] = scipy.sparse.linalg.spsolve(K[FDofs, :][:, FDofs], F[FDofs])
 
     # external forces, see Eq. (3.51)
@@ -494,15 +493,15 @@ def displacementsAndStrainsOfSelement(xi, sdSln, sdStrnMode, sdIntgConst):
     nodexy = xi * sdSln['xy'] + sdSln['sc']
 
     if xi > 1.E-16:  # outside of a tiny region around the scaling centre
-        fxi = (xi**sdSln['d']) * sdIntgConst  # ξ⟨λb⟩{c}
-        dsp = np.matmul(sdSln['v'], fxi) # Eq.(3.21a)
+        fxi = (xi**sdSln['d']) * sdIntgConst  # ξ**⟨λb⟩*{c}
+        dsp = np.matmul(sdSln['v'], fxi)  # Eq.(3.21a)
         strnEle = np.matmul(sdStrnMode['value'][:, :-2], fxi[:-2]) / xi  # Eq.(3.67)
     else:  # at scaling centre
         dsp = np.matmul(sdSln['v'][:, -1:], sdIntgConst[-1:])  # Eq. (3.57)
-        if(np.min(np.real(sdSln['d'][0: -2])) > 0.999):
+        if np.min(np.real(sdSln['d'][0: -2])) > 0.999:
             strnEle = np.matmul(sdStrnMode['value'][:, -5:-2], sdIntgConst[-5:-2])  # Eq. (3.64)
         else:  # stress singularity at scaling centre
-            strnEle = [float('nan')] * len(sdStrnMode['value'])
+            strnEle = np.array([float('nan')] * len(sdStrnMode['value']))
 
     # remove possible tiny imaginary part due to numerical error
     dsp = np.real(dsp)
