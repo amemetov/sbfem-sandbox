@@ -302,9 +302,11 @@ class Ch3Test(unittest.TestCase):
 
     def test_example_3_9(self):
         example = Ex3.example_3_9()
-        d = example['out']['d']
+        nodalDisp = example['out']['nodalDisp']
+        CODnorm = example['out']['CODnorm']
 
-        expected_d = 1.0e-03 * np.array([-0.4452, -0.5611, -0.2388, -0.5213,
+        # check Nodal Displacements
+        expected_nodalDisp = 1.0e-03 * np.array([-0.4452, -0.5611, -0.2388, -0.5213,
                                          -0.0825, -0.4013, -0.0091, -0.2609,
                                          0, -0.1411, -0.0270, -0.0587,
                                          -0.0648, -0.0142, -0.0950, 0.0008,
@@ -313,4 +315,7 @@ class Ch3Test(unittest.TestCase):
                                          -0.0091, 0.2609, -0.0825, 0.4013,
                                          -0.2388, 0.5213, -0.4452, 0.5611
         ])
-        npt.assert_array_almost_equal(d, expected_d, decimal=3, err_msg=f"Mismatched 'd'")
+        npt.assert_array_almost_equal(nodalDisp, expected_nodalDisp, decimal=3, err_msg="Mismatched 'nodalDisp'")
+
+        # check CODnorm - dimensionless crack opening displacements (Δu y E∕pR)
+        self.assertAlmostEqual(CODnorm, 11.2226, places=4, msg="Mismatched `CODnorm`")
