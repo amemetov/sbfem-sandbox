@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
 
 
 def matlabToPythonIndices(indices):
@@ -105,13 +106,15 @@ def plotSBFEMesh(coord, sdConn, opt):
         if 'LabelSC' in opt and opt['LabelSC'] is not None:
             # plot scaling centre
             plt.plot(opt['sdSC'][:, 0], opt['sdSC'][:, 1], 'r+', markersize=markersize, linewidth=LineWidth)
-            plt.plot(opt['sdSC'][:, 0], opt['sdSC'][:, 1], 'ro', fillstyle='none', markersize=markersize, linewidth=LineWidth)
+            plt.plot(opt['sdSC'][:, 0], opt['sdSC'][:, 1], 'ro', fillstyle='none', markersize=markersize,
+                     linewidth=LineWidth)
             if opt['LabelSC'] > 1:
                 if opt['LabelSC'] > 5:
                     fontsize = opt['LabelSC']
                 else:
                     fontsize = 12
-                plotMultipleText(opt['sdSC'][:, 0], opt['sdSC'][:, 1], [' ' + str(x) for x in np.arange(nsd)], color='r', fontsize=fontsize)
+                plotMultipleText(opt['sdSC'][:, 0], opt['sdSC'][:, 1], [' ' + str(x) for x in np.arange(nsd)],
+                                 color='r', fontsize=fontsize)
     if 'PlotNode' in opt and opt['PlotNode']:
         # showing nodes by plotting a circle
         plt.plot(coord[:, 0], coord[:, 1], 'ko', fillstyle='none', markersize=markersize, linewidth=LineWidth)
@@ -159,9 +162,9 @@ def plotDeformedMesh(d, coord, sdConn, opt):
     # maximum displacement
     Umax = np.max(np.abs(d))
     # maximum dimension of domain
-    Lmax = np.max(np.max(coord)-np.min(coord))
+    Lmax = np.max(np.max(coord) - np.min(coord))
     # factor to magnify the displacement
-    fct = magnFct * Lmax/Umax
+    fct = magnFct * Lmax / Umax
     # augment nodal coordinates
     deformed = coord + fct * np.reshape(d, (2, -1), order='F').T
 
@@ -203,3 +206,68 @@ def plotStressContour(X, Y, C, levels=None, cmap='jet', opt=None):
         plt.show()
 
     plt.show()
+
+
+def plotTriFEMesh(p, t, opt):
+    """
+    Plot mesh of triangular elements
+    :param p: p(i,:) - coordinates of node i
+    :param t: t(i,:) - nodal numbers of triangle i
+    :param opt: a dict with a keys:
+            LabelEle=0, do not label element; otherwise, font size of element number
+            LabelNode=0, do not label nodes; otherwise, font size of element number
+            LineStyle, EdgeColor, LineWidth, FaceColor
+
+    :return:
+    """
+    # default options
+    LineStyle = 'solid'
+    EdgeColor = 'k'
+    LineWidth = 1
+    FaceColor = 'b'
+    # use specified options if present
+    if 'LineStyle' in opt and opt['LineStyle'] is not None:
+        LineStyle = opt['LineStyle']
+    if 'EdgeColor' in opt and opt['EdgeColor'] is not None:
+        EdgeColor = opt['EdgeColor']
+    if 'LineWidth' in opt and opt['LineWidth'] is not None:
+        LineWidth = opt['LineWidth']
+    if 'FaceColor' in opt and opt['FaceColor'] is not None:
+        FaceColor = opt['FaceColor']
+
+    # plot triangular mesh
+    x = p[:, 0]
+    y = p[:, 1]
+    z = np.ones_like(x)
+    triang = mtri.Triangulation(x, y, t)
+    plt.tricontourf(triang, z, colors=FaceColor)
+    plt.triplot(triang, color=EdgeColor, linestyle=LineStyle, linewidth=LineWidth)
+
+    # apply plot options
+    if 'LabelNode' in opt and opt['LabelNode']:  # nodes
+        if opt['LabelNode'] <= 2:  # font size of nodal number
+            fontsize = 14
+        else:
+            fontsize = opt['LabelNode']
+        # plot nodes
+        plt.plot(x, y, 'ko', linewidth=LineWidth)
+        # number of nodes
+        nNode = len(p)
+        plotMultipleText(x, y, [' ' + str(x) for x in np.arange(nNode)], fontsize=fontsize)
+
+    if 'LabelEle' in opt and opt['LabelEle']:  # elements
+        if opt['LabelEle'] <= 2:  # font size of element number
+            fontsize = 14
+        else:
+            fontsize = opt['LabelEle']
+        # centroids
+        triCnt = (p[t[:, 0], :] + p[t[:, 1], :] + p[t[:, 2], :]) / 3
+        # plot centroids
+        plt.plot(triCnt[:, 0], triCnt[:, 1], 'r*')
+        # number of triangular elements
+        nTri = len(t)
+        # label elements
+        plotMultipleText(triCnt[:, 0], triCnt[:, 1], [' ' + str(x) for x in np.arange(nTri)], fontsize=fontsize, color='r')
+
+    if 'show' in opt and opt['show']:
+        plt.show()
