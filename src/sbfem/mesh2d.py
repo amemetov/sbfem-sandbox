@@ -83,11 +83,13 @@ def meshConnectivity(sdConn):
             # store the edges to be reversed in sorting as negative values
             idx = meshEdge[ii][0, :] > meshEdge[ii][1, :]
             sdEdge[ii][idx] = - sdEdge[ii][idx]
-            i1 = i2 + 1  # update the counter for the next element
+            i1 = i2  # update the counter for the next element
         # combine edges of all elements.
+        meshEdge = np.hstack(meshEdge[:])
         # The two nodes of an edge are sorted in ascending order.
+        meshEdge = np.sort(meshEdge, axis=0)
         # Each edge is stored as one row.
-        meshEdge = (np.sort([meshEdge[:]])).T
+        meshEdge = meshEdge.T
     elif isinstance(sdConn, list) and len(sdConn[0].shape) == 1:
         # sdConn is a cell array of a 1D array, sdConn{i} are the nodes of polygon i
         pass
@@ -96,5 +98,11 @@ def meshConnectivity(sdConn):
         pass
     else:
         raise ValueError('Unexpected type of `sdConn`')
+
+    # remove duplicated entries of edges
+    meshEdge, ic = np.unique(meshEdge, axis=0, return_inverse=True)
+    for ii in range(nsd):  # loop over S-elements/elements
+        # update edge numbers
+        sdEdge[ii] = np.sign(sdEdge[ii][:]) * ic[np.abs(sdEdge[ii])]
 
     return meshEdge, sdEdge
