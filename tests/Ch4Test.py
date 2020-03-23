@@ -32,6 +32,11 @@ class Ch4Test(unittest.TestCase):
         utils.plotTriFEMesh(p, t, {'LabelEle': 10, 'LabelNode': 10,
                                    'show': True})
 
-        
-        pass
 
+    def testMeshConnectivity1(self):
+        # triangular elements
+        t = np.array([[5, 4, 6], [3, 2, 1], [1, 4, 3], [4, 5, 3], [2, 3, 7], [7, 3, 5]])
+
+        meshEdge, sdEdge = mesh2d.meshConnectivity(t)
+        print(meshEdge)
+        print(sdEdge)
