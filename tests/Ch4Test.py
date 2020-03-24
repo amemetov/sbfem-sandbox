@@ -47,12 +47,13 @@ class Ch4Test(unittest.TestCase):
                       [5, 6], [5, 7]]))
 
         exp_sdEdge = utils.matlabToPythonIndices(
-            np.array([[9, 10, 11],
-                      [4, 1, 2],
-                      [3, 6, 2],
-                      [9, 7, 6],
-                      [4, 8, 5],
-                      [8, 7, 12]]))
+            np.array([[9, 10, 11],  # triangle 1
+                      [4, 1, 2],    # triangle 2
+                      [3, 6, 2],    # triangle 3
+                      [9, 7, 6],    # triangle 4
+                      [4, 8, 5],    # triangle 5
+                      [8, 7, 12]    # triangle 6
+                      ]))
 
         npt.assert_equal(meshEdge, exp_meshEdge, err_msg='Mismatched `meshEdge`')
         npt.assert_equal(np.abs(sdEdge), exp_sdEdge, err_msg='Mismatched `sdEdge`')
@@ -64,8 +65,8 @@ class Ch4Test(unittest.TestCase):
         sdConn = utils.matlabToPythonIndices(
             np.array([
                 np.array([[2, 5], [5, 7], [7, 8], [8, 3], [3, 2]]),  # S-element 1
-                np.array([[1, 4], [4, 5], [5, 2], [2, 1]]),  # S-element 2
-                np.array([[4, 6], [6, 7], [7, 5], [5, 4]])  # S-element 3
+                np.array([[1, 4], [4, 5], [5, 2], [2, 1]]),          # S-element 2
+                np.array([[4, 6], [6, 7], [7, 5], [5, 4]])           # S-element 3
             ]))
 
         meshEdge, sdEdge = mesh2d.meshConnectivity(sdConn)
@@ -74,7 +75,34 @@ class Ch4Test(unittest.TestCase):
 
         exp_meshEdge = utils.matlabToPythonIndices(
             np.array([[1, 2], [1, 4], [2, 3], [2, 5], [3, 8], [4, 5], [4, 6], [5, 7], [6, 7], [7, 8]]))
-        exp_sdEdge = utils.matlabToPythonIndices([[4, 8, 10, 5, 3], [2, 6, 4, 1], [7, 9, 8, 6]])
+        exp_sdEdge = utils.matlabToPythonIndices([[4, 8, 10, 5, 3],  # S-element 1
+                                                  [2, 6, 4, 1],      # S-element 2
+                                                  [7, 9, 8, 6]       # S-element 3
+                                                  ])
+
+        npt.assert_equal(meshEdge, exp_meshEdge, err_msg='Mismatched `meshEdge`')
+        self.assertSequenceEqual(absSdEdge, exp_sdEdge, msg='Mismatched `sdEdge`')
+
+    def testMeshConnectivityPolygonElements(self):
+        # see p.157 and p.160
+        polygon = [[9, 8, 4, 2, 3], [11, 10, 5, 4, 8], [10, 12, 7, 6, 5],
+                   [14, 12, 10, 11, 13], [4, 5, 6, 1, 2], [13, 11, 8, 9]]
+
+        meshEdge, sdEdge = mesh2d.meshConnectivity(polygon)
+        # convert to list of list, otherwise assertSequenceEqual throws exception
+        absSdEdge = [e.tolist() for e in np.abs(sdEdge)]
+
+        exp_meshEdge = np.array([[1, 2], [1, 6], [2, 3], [2, 4], [3, 9], [4, 5], [4, 8],
+                                 [5, 6], [5, 10], [6, 7], [7, 12], [8, 9], [8, 11], [9, 13],
+                                 [10, 11], [10, 12], [11, 13], [12, 14], [13, 14]])
+
+        exp_sdEdge = utils.matlabToPythonIndices([[12,  7,  4,  3,  5],  # polygon 1
+                                                  [15,  9,  6,  7, 13],  # polygon 2
+                                                  [16, 11, 10,  8,  9],  # polygon 3
+                                                  [18, 16, 15, 17, 19],  # polygon 4
+                                                  [6, 8, 2, 1, 4],       # polygon 5
+                                                  [17, 13, 12, 14]       # polygon 6
+                                                  ])
 
         npt.assert_equal(meshEdge, exp_meshEdge, err_msg='Mismatched `meshEdge`')
         self.assertSequenceEqual(absSdEdge, exp_sdEdge, msg='Mismatched `sdEdge`')
