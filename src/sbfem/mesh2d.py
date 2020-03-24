@@ -67,7 +67,6 @@ def meshConnectivity(sdConn):
 
     # construct connectivity of edges to S-elements/elements
     # sdConn is intepreted based on its data type
-    meshEdge, sdEdge = None, None
 
     if np.issctype(sdConn.dtype):
         # sdConn is a matrix, sdConn(i,:) are the nodes of element i

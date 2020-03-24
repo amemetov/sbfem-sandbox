@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.tri as mtri
+from matplotlib.patches import Polygon
 
 
 def matlabToPythonIndices(indices):
@@ -21,9 +21,33 @@ def matlabToPythonIndices(indices):
         else:
             return np.array([matlabToPythonIndices(i) for i in indices])
 
-
     raise ValueError("`matlabToPythonIndices` allows only one of the following types of argument: "
                      f"`int`, `list`, `numpy array`. Got {type(indices)}")
+
+
+def polygonCentroid(xy):
+    """
+    Centroid of a polygon
+    :param: xy: xy(i,:) - coordinates of vertices in counter-clockwise direction
+    :return: cnt: cnt(:) - centroid of polygon
+    """
+    xy = np.vstack((xy, xy[0, :]))  # appending the 1st vertex after the last
+    # array of all triangles formed by the coordinate origin and an edge of the polygon, Eq. (4.9)
+    area2 = xy[0:-1, 0] * xy[1:, 1] - xy[1:, 0] * xy[0:-1, 1]
+    # array of centroids of triangles, Eq. (4.10)
+    c = np.vstack((xy[0:-1, 0] + xy[1:, 0], xy[0:-1, 1] + xy[1:, 1])) / 3
+
+    # centroid of polygon, Eq. (4.11)
+    return np.sum(np.vstack((area2, area2)) * c, axis=1) / np.sum(area2)
+
+
+def polygonsCentroids(coords, polygons):
+    """
+    :param coords: coords(i,:) - coordinates of node i
+    :param polygons: polygons(i,:) - nodal numbers of polygon i
+    :return: centroid(i, :) - centroids of polygon i
+    """
+    return np.array([polygonCentroid(coords[p]) for p in polygons])
 
 
 def plotMultipleText(X, Y, text, **kwargs):
@@ -212,11 +236,11 @@ def plotStressContour(X, Y, C, levels=None, cmap='jet', opt=None):
     plt.show()
 
 
-def plotTriFEMesh(p, t, opt):
+def plotPolyFEMesh(coords, polygons, opt):
     """
-    Plot mesh of triangular elements
-    :param p: p(i,:) - coordinates of node i
-    :param t: t(i,:) - nodal numbers of triangle i
+    Plot mesh of polygon elements
+    :param coords: coords(i,:) - coordinates of node i
+    :param polygons: polygons(i,:) - nodal numbers of polygon i
     :param opt: a dict with a keys:
             LabelEle=0, do not label element; otherwise, font size of element number
             LabelNode=0, do not label nodes; otherwise, font size of element number
@@ -239,13 +263,15 @@ def plotTriFEMesh(p, t, opt):
     if 'FaceColor' in opt and opt['FaceColor'] is not None:
         FaceColor = opt['FaceColor']
 
-    # plot triangular mesh
-    x = p[:, 0]
-    y = p[:, 1]
-    z = np.ones_like(x)
-    triang = mtri.Triangulation(x, y, t)
-    plt.tricontourf(triang, z, colors=FaceColor)
-    plt.triplot(triang, color=EdgeColor, linestyle=LineStyle, linewidth=LineWidth)
+    # plot polygon mesh
+
+    # get default axis
+    ax = plt.gca()
+
+    for p in polygons:
+        xy = coords[p]
+        ax.add_patch(Polygon(xy, closed=True, fill=True, color=FaceColor))
+        ax.add_patch(Polygon(xy, closed=True, fill=False, color=EdgeColor, linestyle=LineStyle, linewidth=LineWidth))
 
     # apply plot options
     if 'LabelNode' in opt and opt['LabelNode']:  # nodes
@@ -254,9 +280,11 @@ def plotTriFEMesh(p, t, opt):
         else:
             fontsize = opt['LabelNode']
         # plot nodes
+        x = coords[:, 0]
+        y = coords[:, 1]
         plt.plot(x, y, 'ko', linewidth=LineWidth)
         # number of nodes
-        nNode = len(p)
+        nNode = len(coords)
         plotMultipleText(x, y, [' ' + str(x) for x in np.arange(nNode)], fontsize=fontsize)
 
     if 'LabelEle' in opt and opt['LabelEle']:  # elements
@@ -265,13 +293,14 @@ def plotTriFEMesh(p, t, opt):
         else:
             fontsize = opt['LabelEle']
         # centroids
-        triCnt = (p[t[:, 0], :] + p[t[:, 1], :] + p[t[:, 2], :]) / 3
+        polyCnt = polygonsCentroids(coords, polygons)
         # plot centroids
-        plt.plot(triCnt[:, 0], triCnt[:, 1], 'r*')
-        # number of triangular elements
-        nTri = len(t)
+        plt.plot(polyCnt[:, 0], polyCnt[:, 1], 'r*')
+        # number of polygon elements
+        nPoly = len(polygons)
         # label elements
-        plotMultipleText(triCnt[:, 0], triCnt[:, 1], [' ' + str(x) for x in np.arange(nTri)], fontsize=fontsize, color='r')
+        plotMultipleText(polyCnt[:, 0], polyCnt[:, 1], [' ' + str(x) for x in np.arange(nPoly)], fontsize=fontsize,
+                         color='r')
 
     if 'show' in opt and opt['show']:
         plt.show()

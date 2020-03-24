@@ -11,7 +11,8 @@ class Ch4Test(unittest.TestCase):
     This class contains tests for examples and methods from Chapter4.
     """
 
-    def testTriToSBFEMesh(self):
+    def testPlotTriMesh(self):
+        # see p.166
         # nodal coordinates
         p = np.array([[0.00, -0.16], [0.00, 0.16], [0.00, -0.50], [0.00, 0.50],
                       [0.41, -0.50], [0.41, 0.50], [0.51, -0.00], [0.80, -0.50],
@@ -27,13 +28,48 @@ class Ch4Test(unittest.TestCase):
                       [13, 15, 19], [19, 18, 13], [13, 18, 14], [9, 6, 7],
                       [7, 10, 9], [11, 9, 10], [11, 13, 14], [10, 13, 11]]))
 
+        utils.plotPolyFEMesh(p, t, {'LabelEle': 10, 'LabelNode': 10, 'show': True})
+
+    def testPlotPolyMesh(self):
+        # Nodal coordinates
+        coord = np.array([[1.00, 1.00], [0.57, 1.00], [0.00, 1.00],
+                          [0.53, 0.75], [0.82, 0.50], [1.00, 0.50],
+                          [1.00, 0.00], [0.36, 0.63], [0.00, 0.77],
+                          [0.53, 0.21], [0.33, 0.38], [0.55, 0.00],
+                          [0.00, 0.28], [0.00, 0.00]])
+
+        # see p.157 and p.160
+        polygon = utils.matlabToPythonIndices([[9, 8, 4, 2, 3],  # polygon 1
+                                               [11, 10, 5, 4, 8],  # polygon 2
+                                               [10, 12, 7, 6, 5],  # polygon 3
+                                               [14, 12, 10, 11, 13],  # polygon 4
+                                               [4, 5, 6, 1, 2],  # polygon 5
+                                               [13, 11, 8, 9]])  # polygon 6
+
+        utils.plotPolyFEMesh(coord, polygon, {'LabelEle': 10, 'LabelNode': 10, 'show': True})
+
+    def testTriToSBFEMesh(self):
+        # see p.166
+        # nodal coordinates
+        p = np.array([[0.00, -0.16], [0.00, 0.16], [0.00, -0.50], [0.00, 0.50],
+                      [0.41, -0.50], [0.41, 0.50], [0.51, -0.00], [0.80, -0.50],
+                      [0.80, 0.50], [1.00, 0.00], [1.20, 0.50], [1.20, -0.50],
+                      [1.49, 0.00], [1.59, 0.50], [1.59, -0.50], [2.00, -0.50],
+                      [2.00, 0.50], [2.00, 0.16], [2.00, -0.16]])
+
+        # triangular elements
+        t = utils.matlabToPythonIndices(
+            np.array([[5, 1, 3], [15, 16, 19], [7, 2, 1], [1, 5, 7],
+                      [5, 8, 7], [18, 17, 14], [4, 2, 6], [2, 7, 6],
+                      [10, 8, 12], [10, 7, 8], [12, 15, 13], [13, 10, 12],
+                      [13, 15, 19], [19, 18, 13], [13, 18, 14], [9, 6, 7],
+                      [7, 10, 9], [11, 9, 10], [11, 13, 14], [10, 13, 11]]))
+
+        # TODO: implement
         # coord, sdConn, sdSC = mesh2d.
 
-        utils.plotTriFEMesh(p, t, {'LabelEle': 10, 'LabelNode': 10,
-                                   'show': True})
-
     def testMeshConnectivityTriangularElements(self):
-        # see p.161
+        # see pages 157, 158 and 161
         # triangular elements
         t = utils.matlabToPythonIndices(np.array([[5, 4, 6], [3, 2, 1], [1, 4, 3], [4, 5, 3], [2, 3, 7], [7, 3, 5]]))
 
@@ -85,16 +121,20 @@ class Ch4Test(unittest.TestCase):
 
     def testMeshConnectivityPolygonElements(self):
         # see p.157 and p.160
-        polygon = [[9, 8, 4, 2, 3], [11, 10, 5, 4, 8], [10, 12, 7, 6, 5],
-                   [14, 12, 10, 11, 13], [4, 5, 6, 1, 2], [13, 11, 8, 9]]
+        polygon = utils.matlabToPythonIndices([[9, 8, 4, 2, 3],         # polygon 1
+                                               [11, 10, 5, 4, 8],       # polygon 2
+                                               [10, 12, 7, 6, 5],       # polygon 3
+                                               [14, 12, 10, 11, 13],    # polygon 4
+                                               [4, 5, 6, 1, 2],         # polygon 5
+                                               [13, 11, 8, 9]])         # polygon 6
 
         meshEdge, sdEdge = mesh2d.meshConnectivity(polygon)
         # convert to list of list, otherwise assertSequenceEqual throws exception
         absSdEdge = [e.tolist() for e in np.abs(sdEdge)]
 
-        exp_meshEdge = np.array([[1, 2], [1, 6], [2, 3], [2, 4], [3, 9], [4, 5], [4, 8],
+        exp_meshEdge = utils.matlabToPythonIndices(np.array([[1, 2], [1, 6], [2, 3], [2, 4], [3, 9], [4, 5], [4, 8],
                                  [5, 6], [5, 10], [6, 7], [7, 12], [8, 9], [8, 11], [9, 13],
-                                 [10, 11], [10, 12], [11, 13], [12, 14], [13, 14]])
+                                 [10, 11], [10, 12], [11, 13], [12, 14], [13, 14]]))
 
         exp_sdEdge = utils.matlabToPythonIndices([[12,  7,  4,  3,  5],  # polygon 1
                                                   [15,  9,  6,  7, 13],  # polygon 2
