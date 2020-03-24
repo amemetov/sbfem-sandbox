@@ -33,7 +33,8 @@ class Ch4Test(unittest.TestCase):
                                    'show': True})
 
 
-    def testMeshConnectivity1(self):
+    def testMeshConnectivityTriangularElements(self):
+        # see p.161
         # triangular elements
         t = utils.matlabToPythonIndices(np.array([[5, 4, 6], [3, 2, 1], [1, 4, 3], [4, 5, 3], [2, 3, 7], [7, 3, 5]]))
 
