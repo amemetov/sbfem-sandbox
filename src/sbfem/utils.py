@@ -16,7 +16,11 @@ def matlabToPythonIndices(indices):
         return [matlabToPythonIndices(i) for i in indices]
 
     if isinstance(indices, np.ndarray):
-        return indices - 1
+        if np.issctype(indices.dtype):
+            return indices - 1
+        else:
+            return np.array([matlabToPythonIndices(i) for i in indices])
+
 
     raise ValueError("`matlabToPythonIndices` allows only one of the following types of argument: "
                      f"`int`, `list`, `numpy array`. Got {type(indices)}")

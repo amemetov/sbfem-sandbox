@@ -66,14 +66,14 @@ def meshConnectivity(sdConn):
 
     meshEdge, sdEdge = None, None
 
-    if isinstance(sdConn, np.ndarray):
+    if np.issctype(sdConn.dtype):
         # sdConn is a matrix, sdConn(i,:) are the nodes of element i
         # sdConn is a matrix (triangular elements)
 
         # the following loop collects the edges of all elements
-        sdEdge = []  # [1] * nsd  # initialization
-        i1 = 0  # counter of edges
-        meshEdge = []  # [1] * nsd  # initialization
+        meshEdge = []
+        sdEdge = []
+        i1 = 1  # counter of edges
         for ii in range(nsd):  # loop over elements
             eNode = sdConn[ii]  # nodes of an element
             i2 = i1 + len(eNode)  # count the edges
@@ -82,7 +82,7 @@ def meshConnectivity(sdConn):
             sdEdge.append(np.arange(i1, i2))  # edges of an element
             # store the edges to be reversed in sorting as negative values
             idx = meshEdge[ii][0, :] > meshEdge[ii][1, :]
-            sdEdge[ii][idx] = - sdEdge[ii][idx]
+            sdEdge[ii][idx] = -sdEdge[ii][idx]
             i1 = i2  # update the counter for the next element
         # combine edges of all elements.
         meshEdge = np.hstack(meshEdge[:])
@@ -90,19 +90,39 @@ def meshConnectivity(sdConn):
         meshEdge = np.sort(meshEdge, axis=0)
         # Each edge is stored as one row.
         meshEdge = meshEdge.T
-    elif isinstance(sdConn, list) and len(sdConn[0].shape) == 1:
-        # sdConn is a cell array of a 1D array, sdConn{i} are the nodes of polygon i
-        pass
-    elif isinstance(sdConn, list) and len(sdConn[0].shape) == 2:
-        # sdConn is a cell array of a matrix, sdConn{i} are the nodes of line elements of S-element i
-        pass
     else:
-        raise ValueError('Unexpected type of `sdConn`')
+        sdEdge = []
+        i1 = 1
+        if np.ndim(sdConn[0]) > 1:
+            # sdConn is a cell array of a matrix, sdConn{i} are the nodes of line elements of S-element i
+            # S-elements (a cell has multiple rows)
+            # all the edges of S-elements are numbered in this loop
+            for ii in range(nsd):  # loop over S-elements
+                i2 = i1 + len(sdConn[ii])  # count the edges
+                sdEdge.append(np.arange(i1, i2))  # edges of an S-element
+                # store the edges to be reversed in sorting as negative values
+                # each element edge is defined by two nodes as a row
+                idx = sdConn[ii][:, 0] > sdConn[ii][:, 1]
+                sdEdge[ii][idx] = -sdEdge[ii][idx]
+                i1 = i2
+            # combine edges of all S-elements.
+            meshEdge = np.vstack(sdConn[:])
+            # The two nodes of an edge are sorted in ascending order.
+            # Each edge is stored as one row.
+            meshEdge = np.sort(meshEdge, axis=1)
+            # meshEdge = sort(vertcat(sdConn{:}),2);
+        else:
+            # sdConn is a cell array of a 1D array, sdConn{i} are the nodes of polygon i
+            pass
 
     # remove duplicated entries of edges
     meshEdge, ic = np.unique(meshEdge, axis=0, return_inverse=True)
     for ii in range(nsd):  # loop over S-elements/elements
         # update edge numbers
-        sdEdge[ii] = np.sign(sdEdge[ii][:]) * ic[np.abs(sdEdge[ii])]
+        # store sign of 1-based indices
+        sign = np.sign(sdEdge[ii])
+        # convert to 0-based indices
+        sdEdge[ii] = np.abs(sdEdge[ii]) - 1
+        sdEdge[ii] = sign * ic[np.abs(sdEdge[ii])]
 
     return meshEdge, sdEdge
