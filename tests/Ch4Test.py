@@ -73,7 +73,7 @@ class Ch4Test(unittest.TestCase):
         # triangular elements
         t = utils.matlabToPythonIndices(np.array([[5, 4, 6], [3, 2, 1], [1, 4, 3], [4, 5, 3], [2, 3, 7], [7, 3, 5]]))
 
-        meshEdge, sdEdge, edge2sd = mesh2d.meshConnectivity(t)
+        meshEdge, sdEdge, edge2sd, node2Edge = mesh2d.meshConnectivity(t)
 
         exp_meshEdge = utils.matlabToPythonIndices(
             np.array([[1, 2], [1, 3], [1, 4],
@@ -106,9 +106,20 @@ class Ch4Test(unittest.TestCase):
                          [6]        # edge 12 belongs to S-element 6
                          ])
 
+        exp_node2Edge = utils.matlabToPythonIndices([
+            [1, 2, 3],          # node 1 belongs to edges 1, 2, 3
+            [1, 4, 5],          # node 2 belongs to edges 1, 4, 5
+            [2, 4, 6, 7, 8],    # node 3 belongs to edges 2, 4, 5, 7, 8
+            [3, 6, 9, 10],      # node 4 belongs to edges 3, 6, 9, 10
+            [7, 9, 11, 12],     # node 5 belongs to edges 7, 9, 11, 12
+            [10, 11],           # node 6 belongs to edges 10, 11
+            [5, 8, 12]          # node 7 belongs to edges 5, 8, 12
+        ])
+
         npt.assert_equal(meshEdge, exp_meshEdge, err_msg='Mismatched `meshEdge`')
         npt.assert_equal(np.abs(sdEdge), exp_sdEdge, err_msg='Mismatched `sdEdge`')
         npt.assert_equal(edge2sd, exp_edge2sd, err_msg='Mismatched `edge2sd`')
+        npt.assert_equal(node2Edge, exp_node2Edge, err_msg='Mismatched `node2Edge`')
 
     def testMeshConnectivitySElements(self):
         # see p.90
@@ -121,7 +132,7 @@ class Ch4Test(unittest.TestCase):
                 np.array([[4, 6], [6, 7], [7, 5], [5, 4]])           # S-element 3
             ]))
 
-        meshEdge, sdEdge, edge2sd = mesh2d.meshConnectivity(sdConn)
+        meshEdge, sdEdge, _, _ = mesh2d.meshConnectivity(sdConn)
         # convert to list of list, otherwise assertSequenceEqual throws exception
         absSdEdge = [e.tolist() for e in np.abs(sdEdge)]
 
@@ -144,7 +155,7 @@ class Ch4Test(unittest.TestCase):
                                                [4, 5, 6, 1, 2],         # polygon 5
                                                [13, 11, 8, 9]])         # polygon 6
 
-        meshEdge, sdEdge, edge2sd = mesh2d.meshConnectivity(polygon)
+        meshEdge, sdEdge, _, _ = mesh2d.meshConnectivity(polygon)
         # convert to list of list, otherwise assertSequenceEqual throws exception
         absSdEdge = [e.tolist() for e in np.abs(sdEdge)]
 
