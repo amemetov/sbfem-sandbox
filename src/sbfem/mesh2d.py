@@ -170,7 +170,7 @@ def meshConnectivity(sdConn):
             ib = ib + 1  # update the pointer
     # the S-elements/elements connected to the last edges
     edge2sd.append(asd[ib:])
-    # sort S-elements for testing
+    # sort S-elements for convenience of testing/using
     edge2sd = [np.sort(s) for s in edge2sd]
 
     # ##### find edges connected to a node #####
@@ -190,7 +190,13 @@ def meshConnectivity(sdConn):
         ib = ie  # + 1  # update the pointer
     # store edges connected to the last node
     node2Edge.append(edgei[ib:])
-    # sort edges for testing
+    # sort edges for convenience of testing/using
     node2Edge = [np.sort(e) for e in node2Edge]
 
-    return meshEdge, sdEdge, edge2sd, node2Edge
+    # ##### find S-elements connected to a node #####
+    node2sd = []  # initialization
+    np_edge2sd = np.array(edge2sd)  # create to use indexing in the following loop
+    for ii in range(nNode):  # loop over nodes
+        node2sd.append(np.unique(np.concatenate(np_edge2sd[node2Edge[ii]])))
+
+    return meshEdge, sdEdge, edge2sd, node2Edge, node2sd
