@@ -145,4 +145,30 @@ def meshConnectivity(sdConn):
         sdEdge[ii] = np.abs(sdEdge[ii]) - 1
         sdEdge[ii] = sign * ic[np.abs(sdEdge[ii])]
 
-    return meshEdge, sdEdge
+    # find S-elements/elements connected to an edge
+    a = np.abs(np.concatenate(sdEdge))  # edges of all S-elements/elements
+    # the following loop matchs S-element/element numbers to edges
+    asd = np.zeros_like(a)  # initialization
+    ib = 0  # pointer to the first edge of an S-element/element
+    for ii in range(nsd):  # loop over S-elements/elements
+        ie = ib + len(sdEdge[ii])
+        asd[ib:ie] = ii  # edge a(i) is connected to S-element/element asd(i)
+        ib = ie  # update the pointer
+    # sort S-element numbers according to edge number
+    c, indx = np.sort(a), np.argsort(a)
+    asd = asd[indx]
+    # the following loop collects the S-elements connected to nodes
+    ib = 0  # pointer to the 1st S-element/element connected to an edge
+    nMeshedges = len(meshEdge)  # number of edges in mesh
+    edge2sd = [] # cell(nMeshedges,1); # initialization
+    for ii in range(nMeshedges-1):  # loop over edges (except for the last one)
+        if c[ib+1] == ii:  # two S-elements/elements connected to an edge
+            edge2sd.append(np.sort(asd[ib:ib+2]))  # store the S-elements/elements
+            ib = ib + 2  # update the pointer
+        else:  # one S-element/element connected to an edge
+            edge2sd.append(np.atleast_1d(asd[ib]))  # store the S-element/element
+            ib = ib + 1  # update the pointer
+    # the S-elements/elements connected to the last edges
+    edge2sd.append(asd[ib:])
+
+    return meshEdge, sdEdge, edge2sd
