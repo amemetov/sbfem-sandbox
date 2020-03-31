@@ -1,7 +1,6 @@
 import numpy as np
 import numpy.testing as npt
 import unittest
-import examples.Ex4 as Ex4
 import sbfem.mesh2d as mesh2d
 import sbfem.utils as utils
 
@@ -10,63 +9,6 @@ class Ch4Test(unittest.TestCase):
     """
     This class contains tests for examples and methods from Chapter4.
     """
-
-    def testPlotTriMesh(self):
-        # see p.166
-        # nodal coordinates
-        p = np.array([[0.00, -0.16], [0.00, 0.16], [0.00, -0.50], [0.00, 0.50],
-                      [0.41, -0.50], [0.41, 0.50], [0.51, -0.00], [0.80, -0.50],
-                      [0.80, 0.50], [1.00, 0.00], [1.20, 0.50], [1.20, -0.50],
-                      [1.49, 0.00], [1.59, 0.50], [1.59, -0.50], [2.00, -0.50],
-                      [2.00, 0.50], [2.00, 0.16], [2.00, -0.16]])
-
-        # triangular elements
-        t = utils.matlabToPythonIndices(
-            np.array([[5, 1, 3], [15, 16, 19], [7, 2, 1], [1, 5, 7],
-                      [5, 8, 7], [18, 17, 14], [4, 2, 6], [2, 7, 6],
-                      [10, 8, 12], [10, 7, 8], [12, 15, 13], [13, 10, 12],
-                      [13, 15, 19], [19, 18, 13], [13, 18, 14], [9, 6, 7],
-                      [7, 10, 9], [11, 9, 10], [11, 13, 14], [10, 13, 11]]))
-
-        utils.plotPolyFEMesh(p, t, {'LabelEle': 10, 'LabelNode': 10, 'show': True})
-
-    def testPlotPolyMesh(self):
-        # Nodal coordinates
-        coord = np.array([[1.00, 1.00], [0.57, 1.00], [0.00, 1.00],
-                          [0.53, 0.75], [0.82, 0.50], [1.00, 0.50],
-                          [1.00, 0.00], [0.36, 0.63], [0.00, 0.77],
-                          [0.53, 0.21], [0.33, 0.38], [0.55, 0.00],
-                          [0.00, 0.28], [0.00, 0.00]])
-
-        # see p.157 and p.160
-        polygon = utils.matlabToPythonIndices([[9, 8, 4, 2, 3],  # polygon 1
-                                               [11, 10, 5, 4, 8],  # polygon 2
-                                               [10, 12, 7, 6, 5],  # polygon 3
-                                               [14, 12, 10, 11, 13],  # polygon 4
-                                               [4, 5, 6, 1, 2],  # polygon 5
-                                               [13, 11, 8, 9]])  # polygon 6
-
-        utils.plotPolyFEMesh(coord, polygon, {'LabelEle': 10, 'LabelNode': 10, 'show': True})
-
-    def testTriToSBFEMesh(self):
-        # see p.166
-        # nodal coordinates
-        p = np.array([[0.00, -0.16], [0.00, 0.16], [0.00, -0.50], [0.00, 0.50],
-                      [0.41, -0.50], [0.41, 0.50], [0.51, -0.00], [0.80, -0.50],
-                      [0.80, 0.50], [1.00, 0.00], [1.20, 0.50], [1.20, -0.50],
-                      [1.49, 0.00], [1.59, 0.50], [1.59, -0.50], [2.00, -0.50],
-                      [2.00, 0.50], [2.00, 0.16], [2.00, -0.16]])
-
-        # triangular elements
-        t = utils.matlabToPythonIndices(
-            np.array([[5, 1, 3], [15, 16, 19], [7, 2, 1], [1, 5, 7],
-                      [5, 8, 7], [18, 17, 14], [4, 2, 6], [2, 7, 6],
-                      [10, 8, 12], [10, 7, 8], [12, 15, 13], [13, 10, 12],
-                      [13, 15, 19], [19, 18, 13], [13, 18, 14], [9, 6, 7],
-                      [7, 10, 9], [11, 9, 10], [11, 13, 14], [10, 13, 11]]))
-
-        # TODO: implement
-        # coord, sdConn, sdSC = mesh2d.
 
     def testMeshConnectivityTriangularElements(self):
         # see pages 157, 158 and 161
