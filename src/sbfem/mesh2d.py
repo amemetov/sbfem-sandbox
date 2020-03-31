@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+import sbfem.utils as utils
 
 
 class MesherType(Enum):
@@ -30,14 +31,113 @@ def triToSBFEMesh(p, t):
         sdConn{isd,:}(ie,:) - an S-element connectivity. The nodes of line element ie in S-element isd.
         sdSC(isd,:) - coordinates of scaling centre of S-element isd
     """
-    np = len(p)  # number of points
+    nump = len(p)  # number of points
     nTri = len(t)  # number of triangles
     # centriods of triangles will be nodes of S-elements.
     # triangular element numbers will be the nodal number of S-elements.
-    triCnt = (p[t[:, 0], :] + p[t[:, 1], :] + p[t[:, 3], :]) / 3  # centroids
+    triCnt = (p[t[:, 0], :] + p[t[:, 1], :] + p[t[:, 2], :]) / 3  # centroids
 
     # construct data on mesh connectivity
     meshEdge, _, edge2sd, node2Edge, node2sd = meshConnectivity(t)
+
+    numEdges = len(edge2sd)
+
+    # number of S-elements connected to an edge
+    edgeNsd = np.array([len(s) for s in edge2sd])
+    # list of boundary edges (connected to 1 S-element only)
+    bEdge = np.argwhere(edgeNsd == 1).flatten()
+    # midpoints of boundary edges
+    bEdgeCentre = (p[meshEdge[bEdge, 0], :] + p[meshEdge[bEdge, 1], :]) / 2
+    # list of points at boundary
+    bp = np.unique(meshEdge[bEdge])
+
+    # include the points in the middle of boundary edges as nodes of S-elements
+    nbEdge = len(bEdge)
+    bEdgeNode = nTri + np.arange(0, nbEdge).T  # nodal number
+    # index from edge number
+    bEdgeIdx = np.full((numEdges,), -1)
+    bEdgeIdx[bEdge] = np.arange(0, nbEdge)
+
+    # include the points at boundary as nodes of S-element mesh
+    nbp = len(bp)
+    bNode = nTri + nbEdge + np.arange(0, nbp).T  # nodal number
+    # index from point number
+    bpIdx = np.full((nump,), -1)
+    bpIdx[bp] = np.arange(0, nbp)
+    # nodal coordinates
+    coord = np.vstack((triCnt, bEdgeCentre, p[bp]))
+
+    # construct polygon S-elements
+    sdConn = []  # initializing connectivity
+    sdSC = []  # initializing scaling centre
+
+    for ii in range(nump):
+        if bpIdx[ii] == -1:  # interior point
+            node = node2sd[ii]  # S-elements connected to node ii
+            # sort nodes in counter-clockwise direction
+            node = sortNodes(node, coord[node], p[ii])
+            # scaling centre at current point
+            sdSC.append(p[ii])
+            # line element connectivity in an S-element
+            sdConn.append(np.vstack((node, np.hstack((node[1:], node[0])))).T)
+        else:  # boundary point, which can become a node or a scaling centre
+            be = bEdgeIdx[node2Edge[ii]]  # edges connected to node
+            nodee = bEdgeNode[be[be != -1]]  # nodes on boundary edges
+            # sort the nodes, except for the one at the current point
+            node = np.concatenate((node2sd[ii], nodee))
+            node = sortNodes(node, coord[node], p[ii])
+
+            # find the two boundary nodes in the node list
+            idx1 = np.argwhere(node == nodee[0])[0][0]
+            idx2 = np.argwhere(node == nodee[1])[0][0]
+
+            # maintain counter-clockwise direction and rearrange the nodes as:
+            # [boundary node 1, current point (node), boundary node 2, others]
+            if abs(idx1 - idx2) > 1:
+                # the two boundary nodes are the first and last in the list
+                node = np.concatenate((node[-1:], bNode[bpIdx[ii]:bpIdx[ii]+1], node[0:-1]))
+            else:
+                # the two boundary nodes are consecutive on the list
+                idx = min(idx1, idx2)
+                node = np.concatenate((node[idx:idx+1], bNode[bpIdx[ii]:bpIdx[ii]+1], node[idx + 1:], node[0:idx]))
+
+            # internal angle between two boundary edges
+            dxy = np.diff(coord[node[0:3]], axis=0)  # Δx, Δy of the 1st 2 edge
+            dl = np.sqrt(np.sum(dxy ** 2, axis=1))  # length
+            dxyn = dxy / dl[:, np.newaxis] # direction cosin
+            # angle between 2 boundary edges
+            alpha = np.real(np.arccos(np.sum(dxyn[0, :] * dxyn[1, :])))
+            beta = 180 - np.sign(np.linalg.det(dxyn)) * alpha  # internal angle
+            if beta < 220:  # include current point as a node
+                # line element connectivity in an S-element
+                sdConn.append(np.vstack((node, np.hstack((node[1:], node[0])))).T)
+                # select centroid as scaling centre
+                sdSC.append(utils.polygonCentroid(coord[node]))
+            else:  # use current point (concave corner) as a scaling centre
+                sdSC.append(p[ii])
+                # line element connectivity in an S-element
+                sdConn.append(np.vstack((node[2:], np.hstack((node[3:], node[0])))).T)
+
+    # remove unconnected nodes
+    a = np.ravel(np.concatenate(sdConn))  # all nodes
+    c = np.unique(a)  # unique nodes
+    i = np.zeros_like(a)
+    i[c] = np.arange(0, len(c))  # new nodal numbers of the unique nodes
+    coord = coord[c]  # update the nodal coordinates accordingly
+    # update line element connectivity in each S-element
+    for ii in range(len(sdConn)):
+        sdConn[ii] = np.reshape(i[sdConn[ii]], (-1, 2))
+
+    return coord, np.array(sdConn), np.array(sdSC)
+
+
+def sortNodes(node, xy, c):
+    # sort nodes in counterclock direction around point c
+    xy = xy - c
+    ang = np.arctan2(xy[:, 1], xy[:, 0])  # angular coordinates
+    ic = np.argsort(ang)  # sort to increasing angular coordinates
+    node = node[ic].T  # rearrange nodes
+    return node
 
 
 def meshConnectivity(sdConn):
@@ -161,9 +261,9 @@ def meshConnectivity(sdConn):
     ib = 0  # pointer to the 1st S-element/element connected to an edge
     nMeshedges = len(meshEdge)  # number of edges in mesh
     edge2sd = []  # initialization
-    for ii in range(nMeshedges-1):  # loop over edges (except for the last one)
-        if c[ib+1] == ii:  # two S-elements/elements connected to an edge
-            edge2sd.append(asd[ib:ib+2])  # store the S-elements/elements
+    for ii in range(nMeshedges - 1):  # loop over edges (except for the last one)
+        if c[ib + 1] == ii:  # two S-elements/elements connected to an edge
+            edge2sd.append(asd[ib:ib + 2])  # store the S-elements/elements
             ib = ib + 2  # update the pointer
         else:  # one S-element/element connected to an edge
             edge2sd.append(np.atleast_1d(asd[ib]))  # store the S-element/element
@@ -183,7 +283,7 @@ def meshConnectivity(sdConn):
     ib = 0  # pointer to the 1st edge connected to a node
     nNode = c[-1] + 1  # number of nodes
     node2Edge = []  # initialization
-    for ii in range(nNode-1):  # loop over nodes (except for the last one)
+    for ii in range(nNode - 1):  # loop over nodes (except for the last one)
         # pointer to the last edge connected to a node
         ie = ib + np.argwhere(c[ib:] != ii)[0][0]
         node2Edge.append(edgei[ib:ie])  # store edges connected to node
