@@ -323,3 +323,77 @@ def meshConnectivity(sdConn):
         node2sd.append(np.unique(np.concatenate(np_edge2sd[node2Edge[ii]])))
 
     return meshEdge, sdEdge, edge2sd, node2Edge, node2sd
+
+
+def subdivideEdge(edgeXi, coord, meshEdge, sdEdge):
+    """
+    Subdivide selected edges of S-elements into multiple elements
+    :param edgeXi: edgeXi(i) - When it is an array: number of subdivision of edge i
+                             - When it is a cell array: column vector of local parametric coordinate
+                             (between 0 and 1) of subdivision of edge i
+    :param coord: coord(i,:) - coordinates of node i
+    :param meshEdge: meshEdge(i,1:2) - the 2 nodes on line i in a mesh.
+                            The node number of the first node is larger than that of the 2nd one
+    :param sdEdge: sdEdge{i} - lines forming S-element i,
+                            >0 when a line follows anti-clockwise direction around the scaling centre.
+                            <0 clockwise direction
+    :return: a tuple (coord, sdConn) where:
+        coord - nodal coordinates.  New nodes are padded to the end
+        sdConn{isd,:}(ie,:) - S-element conncetivity. The nodes of line element ie in S-element isd.
+    """
+    nEdge0 = len(meshEdge)  # number of edges in original mesh
+    nExtraPnt = 0  # number of extra points after subdivision
+    # local parametric coordinate xi (between 0 and 1) of subdivision
+    if isinstance(edgeXi, np.ndarray):
+        edgeDiv = edgeXi  # save array of number of subdivision of edges
+        edgeXi = [None] * nEdge0
+        for ii in range(nEdge0):
+            if edgeDiv[ii] > 1:
+                nDiv = edgeDiv[ii]  # number of subdivision
+                edgeXi[ii] = np.arange(1, nDiv) / nDiv  # uniform subdivision
+                nExtraPnt = nExtraPnt + nDiv - 1
+    else:
+        nExtraPnt = np.size(edgeXi)
+
+    # create new nodes and mesh edges
+    newEdges = [None] * nEdge0  # to store edges after division
+    ib = len(coord)  # index for  new nodes
+    coord = np.vstack((coord, np.zeros((nExtraPnt, 2))))  # including new nodes
+    for ii in range(nEdge0):
+        # dividing edges in original mesh
+        xi = edgeXi[ii]  # local parametric coordinate xi (0, 1)
+        if xi is not None:
+            ie = ib + len(xi)  # index for the last new node
+            xyb = coord[meshEdge[ii, 0]]  # coordinates of start point
+            xye = coord[meshEdge[ii, 1]]  # coordinates of end point
+            xyb, xye = xyb[:, np.newaxis], xye[:, np.newaxis]
+            xi = np.tile(xi, (2, 1))
+            coord[ib:ie] = np.reshape((xyb * (1 - xi) + xye * xi).T, (-1, 2))  # new nodes by interpolation
+            newEdges[ii] = np.vstack((np.hstack((meshEdge[ii, 0], np.arange(ib, ie))),
+                                      np.hstack((np.arange(ib, ie), meshEdge[ii, 1]))))  # new edges on an old one
+            newEdges[ii] = np.reshape(newEdges[ii], (-1, 2))
+            ib = ie
+        else:
+            # no division
+            newEdges[ii] = np.reshape(meshEdge[ii], (-1, 2))
+
+    # construct S-element connectivity
+    nsd = len(sdEdge)  # number of S-elements
+    sdConn = []  # cell(nsd,1);  # initialising connectivity
+    # convert to ndarray for using indexing in the following loop
+    # newEdges = [np.atleast_2d(e) for e in newEdges]
+    newEdges = np.array(newEdges)
+    for isd in range(nsd):
+        sdNewEdges = newEdges[np.abs(sdEdge[isd])]  # update connectivity
+        # find edges that follow clockwise direction
+        idx = np.argwhere(sdEdge[isd] < 0).flatten()
+        for ii in idx:
+            # reverse the element orientation
+            # sdNewEdges[ii] = [sdNewEdges{ii}(end:-1:1,2), sdNewEdges{ii}(end:-1:1,1)];
+            sdNewEdges[ii] = sdNewEdges[ii][:, ::-1]
+        # unroll to get correct format
+        sdNewEdges = np.concatenate(sdNewEdges)
+        # new element connectivity of an S-element
+        sdConn.append(sdNewEdges)
+
+    return coord, sdConn
