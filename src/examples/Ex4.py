@@ -34,6 +34,34 @@ class Ex4Mesh:
         self.SBFEMesh = None
 
 
+def example_4_polygonToSBFEMesh():
+    """
+    p. 160
+    """
+    # Nodal coordinates
+    coord = np.array([[1.00, 1.00], [0.57, 1.00], [0.00, 1.00],
+                      [0.53, 0.75], [0.82, 0.50], [1.00, 0.50],
+                      [1.00, 0.00], [0.36, 0.63], [0.00, 0.77],
+                      [0.53, 0.21], [0.33, 0.38], [0.55, 0.00],
+                      [0.00, 0.28], [0.00, 0.00]])
+
+    # see p.157 and p.160
+    polygon = utils.matlabToPythonIndices([[9, 8, 4, 2, 3],         # polygon 1
+                                           [11, 10, 5, 4, 8],       # polygon 2
+                                           [10, 12, 7, 6, 5],       # polygon 3
+                                           [14, 12, 10, 11, 13],    # polygon 4
+                                           [4, 5, 6, 1, 2],         # polygon 5
+                                           [13, 11, 8, 9]])         # polygon 6
+
+    polyMesh = Mesh(coord, polygon)
+    sdConn, sdSC = mesh2d.polygonToSBFEMesh(coord, polygon)
+    sbfemMesh = SBFEMesh(coord, sdConn, sdSC)
+
+    return {'in': {'polyMesh': polyMesh, 'sbfemMesh': sbfemMesh},
+            'out': {}
+            }
+
+
 def example_4_DeepBeam():
     """
     A Deep Beam. (p.178)
@@ -59,33 +87,13 @@ def example_4_DeepBeam():
                       [7, 10, 9], [11, 9, 10], [11, 13, 14], [10, 13, 11]]))
         return p, t
 
-    def PolygonMesh():
-        # Nodal coordinates
-        coord = np.array([[1.00, 1.00], [0.57, 1.00], [0.00, 1.00],
-                          [0.53, 0.75], [0.82, 0.50], [1.00, 0.50],
-                          [1.00, 0.00], [0.36, 0.63], [0.00, 0.77],
-                          [0.53, 0.21], [0.33, 0.38], [0.55, 0.00],
-                          [0.00, 0.28], [0.00, 0.00]])
-
-        # see p.157 and p.160
-        polygon = utils.matlabToPythonIndices([[9, 8, 4, 2, 3],  # polygon 1
-                                               [11, 10, 5, 4, 8],  # polygon 2
-                                               [10, 12, 7, 6, 5],  # polygon 3
-                                               [14, 12, 10, 11, 13],  # polygon 4
-                                               [4, 5, 6, 1, 2],  # polygon 5
-                                               [13, 11, 8, 9]])  # polygon 6
-        return coord, polygon
-
     p, t = TriMesh()
     triMesh = Mesh(p, t)
-
-    c, polygon = PolygonMesh()
-    polyMesh = Mesh(c, polygon)
 
     coord, sdConn, sdSC = mesh2d.triToSBFEMesh(p, t)
     sbfemMesh = SBFEMesh(coord, sdConn, sdSC)
 
-    return {'in': {'triMesh': triMesh, 'polyMesh': polyMesh, 'sbfemMesh': sbfemMesh},
+    return {'in': {'triMesh': triMesh, 'sbfemMesh': sbfemMesh},
             'out': {}
             }
 

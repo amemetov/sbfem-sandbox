@@ -21,6 +21,29 @@ def createSBFEMesh(mesherType: MesherType):
     pass
 
 
+def polygonToSBFEMesh(coord, polygon):
+    """
+    Convert a polygon mesh to an S-element mesh
+    :param coord: coord(i,:)   - coordinates of node i
+    :param polygon: polygon{i}   - array of vertices of polygon i
+    :return: a tuple (sdConn, sdSC) where:
+        sdConn{isd,:}(ie,:)  - S-element conncetivity. The nodes of line element ie in S-element isd.
+        sdSC(isd,:)  - coordinates of scaling centre of S-element isd.
+    """
+    # sdConn - S-element connectivity stored as a cell array/list (One S-element per cell).
+    # In a cell, the connectivity of line elements is given by one element per row [Node-1 Node-2].
+    nsd = len(polygon)  # number of S-elements
+    sdConn = []  # initialising connectivity
+    sdSC = np.zeros((nsd, 2))  # scaling centre
+    for isub in range(nsd):
+        # build connectivity
+        sdConn.append(np.vstack((polygon[isub], np.hstack((polygon[isub][1:], polygon[isub][0])))).T)
+        # scaling centre at centroid of polygon
+        sdSC[isub] = utils.polygonCentroid(coord[polygon[isub]])
+
+    return sdConn, sdSC
+
+
 def triToSBFEMesh(p, t):
     """
     Convert a triangular mesh to an S-element mesh
@@ -95,16 +118,16 @@ def triToSBFEMesh(p, t):
             # [boundary node 1, current point (node), boundary node 2, others]
             if abs(idx1 - idx2) > 1:
                 # the two boundary nodes are the first and last in the list
-                node = np.concatenate((node[-1:], bNode[bpIdx[ii]:bpIdx[ii]+1], node[0:-1]))
+                node = np.concatenate((node[-1:], bNode[bpIdx[ii]:bpIdx[ii] + 1], node[0:-1]))
             else:
                 # the two boundary nodes are consecutive on the list
                 idx = min(idx1, idx2)
-                node = np.concatenate((node[idx:idx+1], bNode[bpIdx[ii]:bpIdx[ii]+1], node[idx + 1:], node[0:idx]))
+                node = np.concatenate((node[idx:idx + 1], bNode[bpIdx[ii]:bpIdx[ii] + 1], node[idx + 1:], node[0:idx]))
 
             # internal angle between two boundary edges
             dxy = np.diff(coord[node[0:3]], axis=0)  # Δx, Δy of the 1st 2 edge
             dl = np.sqrt(np.sum(dxy ** 2, axis=1))  # length
-            dxyn = dxy / dl[:, np.newaxis] # direction cosin
+            dxyn = dxy / dl[:, np.newaxis]  # direction cosin
             # angle between 2 boundary edges
             alpha = np.real(np.arccos(np.sum(dxyn[0, :] * dxyn[1, :])))
             beta = 180 - np.sign(np.linalg.det(dxyn)) * alpha  # internal angle

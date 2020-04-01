@@ -265,6 +265,12 @@ def plotPolyFEMesh(coords, polygons, opt):
 
     # plot polygon mesh
 
+    if 'title' in opt:
+        plt.title(opt['title'])
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.xlabel('x')
+    plt.ylabel('y')
+
     # get default axis
     ax = plt.gca()
 
@@ -301,6 +307,9 @@ def plotPolyFEMesh(coords, polygons, opt):
         # label elements
         plotMultipleText(polyCnt[:, 0], polyCnt[:, 1], [' ' + str(x) for x in np.arange(nPoly)], fontsize=fontsize,
                          color='r')
+
+    if 'savePath' in opt:
+        plt.savefig(opt['savePath'])
 
     if 'show' in opt and opt['show']:
         plt.show()
