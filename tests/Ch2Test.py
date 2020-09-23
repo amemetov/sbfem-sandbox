@@ -1,3 +1,4 @@
+import time
 import numpy as np
 import numpy.testing as npt
 import unittest
@@ -42,6 +43,21 @@ class Ch2Test(unittest.TestCase):
                                                     [0., 0.66666667, 0., 0.33333333],
                                                     [0.33333333, 0., 0.66666667, 0.],
                                                     [0., 0.33333333, 0., 0.66666667]]))
+
+    def test_example_2_3_Performance(self):
+        xy = np.array([[1, -1], [1, 1]])
+        E = 12
+        D = E / 2 * np.array([[2, 0, 0], [0, 2, 0], [0, 0, 1]])
+        mat = sbfem.Material(D, 1)
+
+        testNumber = 1000
+        start = time.time()
+        for i in range(testNumber):
+            e0, e1, e2, m0 = sbfem.coeffMatricesOf2NodeLineElement(xy, mat)
+        end = time.time()
+        diff = end - start
+        print(f'Example_2_3_Performance elapsed time: {diff} s')
+
 
     def test_example_2_4(self):
         """
@@ -214,3 +230,18 @@ class Ch2Test(unittest.TestCase):
         npt.assert_array_almost_equal(E0, expected_E0, decimal=2, err_msg="E0")
         npt.assert_array_almost_equal(E1, expected_E1, decimal=2, err_msg="E1")
         npt.assert_array_almost_equal(E2, expected_E2, decimal=2, err_msg="E2")
+
+    def test_example_2_5_Performance(self):
+        # Compute coefficient matrices of square S - element
+        xy = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]])
+        conn = np.array([[0, 1], [1, 2], [2, 3], [3, 0]])  # [1:4; 2:4 1]’
+        # elascity matrix(plane stress).
+        mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10, 0), den=2)
+
+        testNumber = 1000
+        start = time.time()
+        for i in range(testNumber):
+            E0, E1, E2, M0 = sbfem.coeffMatricesOfSElement(xy, conn, mat)
+        end = time.time()
+        diff = end - start
+        print(f'Example_2_5_Performance elapsed time: {diff} s')

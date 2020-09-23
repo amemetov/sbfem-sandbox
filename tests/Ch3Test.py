@@ -1,7 +1,9 @@
+import time
 import numpy as np
 import numpy.testing as npt
 import unittest
 import examples.Ex3 as Ex3
+import sbfem.sbfem as sbfem
 import sbfem.utils as utils
 
 
@@ -61,6 +63,22 @@ class Ch3Test(unittest.TestCase):
         npt.assert_array_almost_equal(d, exp_d, decimal=4, err_msg=f"Mismatched 'd'")
         # npt.assert_array_almost_equal(v, exp_v_matlab, decimal=4, err_msg=f"Mismatched 'v'")
         npt.assert_array_almost_equal(M, exp_M, decimal=4, err_msg=f"Mismatched 'M'")
+
+    def test_example_3_1_Performance(self):
+        # Solution of a square S-element
+        xy = np.array([[-1, -1], [1, -1], [1, 1], [-1, 1]])
+        conn = np.array([[0, 1], [1, 2], [2, 3], [3, 0]])  # [1:4; 2:4 1]’
+        # elascity matrix(plane stress).
+        mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10, 0), den=2)
+        E0, E1, E2, M0 = sbfem.coeffMatricesOfSElement(xy, conn, mat)
+
+        testNumber = 1000
+        start = time.time()
+        for i in range(testNumber):
+            K, d, v, M = sbfem.sbfem(E0, E1, E2, M0)
+        end = time.time()
+        diff = end - start
+        print(f'Example_3_1_Performance elapsed time: {diff} s')
 
     def test_example_3_2(self):
         example = Ex3.example_3_2()
