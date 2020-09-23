@@ -140,7 +140,7 @@ def sbfem(E0, E1, E2, M0):
     d = d[idx[:nd]]
     # select the corresponding eigenvectors
     v = v[:, idx[:nd]]
-    v = np.diag(np.concatenate((Pf, 1./Pf), axis=0)).dot(v) # Eq.(3.5)
+    v = np.diag(np.concatenate((Pf, 1./Pf), axis=0)).dot(v) # Eq.(3.35)
 
     # modes of translational rigid body motion, see Item 2 on page 75
     # set last two eigenvalues to zero
