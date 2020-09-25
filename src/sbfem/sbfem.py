@@ -97,7 +97,7 @@ def coeffMatricesOfSElement(xy, conn, mat: Material):
     return E0, E1, E2, M0
 
 
-def sbfem(E0, E1, E2, M0):
+def solveSElement(E0, E1, E2, M0):
     """
     Original name: SElementSlnEigenMethod (p.79)
     :param E0: coefficient matrix of S-Element
@@ -212,7 +212,7 @@ def sbfemAssembly(coord, sdConn, sdSC, mat):
         # compute S-element coefficient matrices
         E0, E1, E2, M0 = coeffMatricesOfSElement(xy, LConn, mat)
         # compute solution for S-element
-        K, d, v, M = sbfem(E0, E1, E2, M0)
+        K, d, v, M = solveSElement(E0, E1, E2, M0)
         # store S-element data and solution
         sdSln.append({
             'xy': xy,

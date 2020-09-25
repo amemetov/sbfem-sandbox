@@ -75,7 +75,7 @@ class Ch3Test(unittest.TestCase):
         testNumber = 1000
         start = time.time()
         for i in range(testNumber):
-            K, d, v, M = sbfem.sbfem(E0, E1, E2, M0)
+            K, d, v, M = sbfem.solveSElement(E0, E1, E2, M0)
         end = time.time()
         diff = end - start
         print(f'Example_3_1_Performance elapsed time: {diff} s')

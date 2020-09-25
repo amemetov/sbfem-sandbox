@@ -59,7 +59,7 @@ def example_3_1():
     # elascity matrix(plane stress).
     mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10, 0), den=2)
     E0, E1, E2, M0 = sbfem.coeffMatricesOfSElement(xy, conn, mat)
-    K, d, v, M = sbfem.sbfem(E0, E1, E2, M0)
+    K, d, v, M = sbfem.solveSElement(E0, E1, E2, M0)
 
     return {
         'in': {'xy': xy, 'conn': conn, 'mat': mat},
@@ -86,7 +86,7 @@ def example_3_2():
     # elascity matrix(plane stress).
     mat = sbfem.Material(D=sbfem.elasticityMatrixForPlaneStress(10, 0), den=2)
     E0, E1, E2, M0 = sbfem.coeffMatricesOfSElement(xy, conn, mat)
-    K, d, v, M = sbfem.sbfem(E0, E1, E2, M0)
+    K, d, v, M = sbfem.solveSElement(E0, E1, E2, M0)
 
     return {
         'in': {'radians': radians, 'xy': xy, 'conn': conn, 'mat': mat},
