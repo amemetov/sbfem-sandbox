@@ -189,6 +189,22 @@ class Ch3Test(unittest.TestCase):
             actualVal = K[s, e]
             self.assertAlmostEqual(1.0e-07 * actualVal, expectedValue, places=4, msg=f"s: {matlabStartIdx}, e: {matlabEndIdx}")
 
+    def test_example_3_3_Performance(self):
+        example = Ex3.example3SElements()
+        coord = example['coord']
+        sdConn = example['sdConn']
+        sdSC = example['sdSC']
+        mat = example['mat']
+
+        testNumber = 1000
+        start = time.time()
+        for i in range(testNumber):
+            # solution of S-elements and assemblage of global stiffness and mass matrices
+            sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+        end = time.time()
+        diff = end - start
+        print(f'test_example_3_3_Performance elapsed time: {diff} s')
+
     def test_example_3_4(self):
         example = Ex3.example_3_4()
         d = example['out']['d']
