@@ -237,9 +237,6 @@ class Ch3Test(unittest.TestCase):
         F = example['F']
         BC_Disp = example['BC_Disp']
 
-        # solution of S-elements and assemblage of global stiffness and mass matrices
-        sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
-
         testNumber = 1000
         start = time.time()
         for i in range(testNumber):
@@ -270,6 +267,20 @@ class Ch3Test(unittest.TestCase):
 
         npt.assert_array_almost_equal(d, expected_d, decimal=4, err_msg=f"Mismatched 'd'")
         npt.assert_array_almost_equal(1.0e-05 * F, expected_F, decimal=4, err_msg=f"Mismatched 'F'")
+
+    def test_example_3_5_Performance(self):
+        input = Ex3.example_3_5_input()
+
+        testNumber = 1000
+        start = time.time()
+        for i in range(testNumber):
+            # solution of S-elements and assemblage of global stiffness and mass matrices
+            sdSln, K, M = sbfem.sbfemAssembly(input['coord'], input['sdConn'], input['sdSC'], input['mat'])
+            # Static solution of nodal displacements and forces
+            d, F = sbfem.solverStatics(K, input['BC_Disp'], input['F'])
+        end = time.time()
+        diff = end - start
+        print(f'test_example_3_5_Performance elapsed time: {diff} s')
 
     def test_example_3_6(self):
         example = Ex3.example_3_6()

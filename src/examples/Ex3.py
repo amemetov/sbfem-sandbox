@@ -145,7 +145,7 @@ def example_3_4():
     }
 
 
-def example_3_5():
+def example_3_5_input():
     """
     Example 3.5 A Deep Cantilever Beam Subject to Bending.
     A deep cantilever beam of height H = 1 m and length L = 2 m is shown in Figure 3.6a.
@@ -154,11 +154,10 @@ def example_3_5():
     The material properties are Young’s modulus E = 10 GPa and Poisson’s ratio ν = 0.2.
     Plane stress conditions are assumed. Determine the deflection of the beam.
     """
-
     # Mesh
     # nodal coordinates. One node per row [x y]
     coord = np.array([
-        [0, 1], [0, 0.5], [0, 0], [0.68, 1], [0.68, 0.63], [0.49, 0.48],  [0.5, 0], [1.35, 1],
+        [0, 1], [0, 0.5], [0, 0], [0.68, 1], [0.68, 0.63], [0.49, 0.48], [0.5, 0], [1.35, 1],
         [2, 1], [1, 0.45], [1.35, 0.62], [1, 0], [1.5, 0.47], [2, 0.5], [1.5, 0], [2, 0]
     ])
 
@@ -194,20 +193,25 @@ def example_3_5():
 
     # assemble nodal forces
     ndn = 2  # 2 DOFs per node
-    NDof = ndn*coord.shape[0]  # number of DOFs
+    NDof = ndn * coord.shape[0]  # number of DOFs
     F = np.zeros(NDof)  # initializing right-hand side of equation [K]{u} = {F}
     edge = utils.matlabToPythonIndices(np.array([[16, 14], [14, 9]]))  # edges subject to tractions, one row per edge
     trac = np.array([[6E5, 0, 0, 0], [0, 0, -6E5, 0]]).T  # tractions, one column per edge
     F = sbfem.addSurfaceTraction(coord, edge, trac, F)
 
+    return {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp }
+
+def example_3_5():
+    input = example_3_5_input()
+
     # solution of S-elements and assemblage of global stiffness and mass matrices
-    sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+    sdSln, K, M = sbfem.sbfemAssembly(input['coord'], input['sdConn'], input['sdSC'], input['mat'])
 
     # Static solution of nodal displacements and forces
-    d, F = sbfem.solverStatics(K, BC_Disp, F)
+    d, F = sbfem.solverStatics(K, input['BC_Disp'], input['F'])
 
     return {
-        'in': {'coord': coord, 'sdConn': sdConn, 'sdSC': sdSC, 'mat': mat, 'F': F, 'BC_Disp': BC_Disp },
+        'in': input,
         'out': {'d': d, 'F': F}
     }
 
