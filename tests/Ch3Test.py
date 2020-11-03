@@ -337,8 +337,8 @@ class Ch3Test(unittest.TestCase):
         exp_dsp = np.array([[1.87500000000002e-05, 2.5e-05],
                             [1.87500000000002e-05, 7.5e-05],
                             [6.25000000000009e-06, 2.5e-05],
-                            [6.25000000000019e-06, 7.50000000000001e-05]])
-        npt.assert_array_almost_equal(np.reshape(dsp, (2, -1), order='F').T, exp_dsp, err_msg='Mismatched `dsp`')
+                            [6.25000000000019e-06, 7.5e-05]])
+        npt.assert_array_almost_equal(np.reshape(dsp, (-1, 2)), exp_dsp, err_msg='Mismatched `dsp`')
 
         # check the strains at the middle points of the elements on the scaled boundary
         exp_strnEle = np.tile(np.expand_dims([-2.50000000000001e-05, 0.0001, 0], axis=1), 4)
@@ -348,6 +348,40 @@ class Ch3Test(unittest.TestCase):
         exp_stresses = np.tile(np.expand_dims([0, 1000, 0], axis=1), 4)
         stresses = np.matmul(mat.D, strnEle)
         npt.assert_array_almost_equal(stresses, exp_stresses, decimal=3, err_msg='Mismatched `stresses`')
+
+    def test_example_3_7_Performance(self):
+        example = Ex3.example3SElements()
+        coord = example['coord']
+        sdConn = example['sdConn']
+        sdSC = example['sdSC']
+        mat = example['mat']
+        F = example['F']
+        BC_Disp = example['BC_Disp']
+
+        isd = utils.matlabToPythonIndices(2)  # S-element number
+        xi = 0.5  # radial coordinate
+
+        testNumber = 1000
+        start = time.time()
+        for i in range(testNumber):
+            # solution of S-elements and assemblage of global stiffness and mass matrices
+            sdSln, K, M = sbfem.sbfemAssembly(coord, sdConn, sdSC, mat)
+            # Static solution of nodal displacements and forces
+            d, F = sbfem.solverStatics(K, BC_Disp, F)
+
+            # strain modes of S-elements
+            sdStrnMode = sbfem.strainModesOfSElements(sdSln)
+
+            # integration constants
+            sdIntgConst = sbfem.integrationConstsOfSElements(d, sdSln)
+
+            # displacements and strains at specified radial coordinate
+            nodexy, dsp, strnNode, GPxy, strnEle = sbfem.displacementsAndStrainsOfSelement(xi, sdSln[isd],
+                                                                                           sdStrnMode[isd],
+                                                                                           sdIntgConst[isd])
+        end = time.time()
+        diff = end - start
+        print(f'test_example_3_7_Performance elapsed time: {diff} s')
 
     def test_example_3_8(self):
         isd = utils.matlabToPythonIndices(2)  # S - element number
