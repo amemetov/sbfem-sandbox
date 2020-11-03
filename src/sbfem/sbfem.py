@@ -477,9 +477,9 @@ def displacementsAndStrainsOfSelement(xi, sdSln, sdStrnMode, sdIntgConst):
     :param sdStrnMode: strain modes of S-element
     :param sdIntgConst: integration constants
     :return: a tuple (nodexy, dsp, strnNode, GPxy, strnEle)
-            where (All valus are on the scaled boundary, i.e. coodinate line, at specified xi):
+            where (All values are on the scaled boundary, i.e. coordinate line, at specified xi):
                 nodexy(i,:)   - coordinates of node i
-                dsp(i,:)      - nodal displacement funcitons of node i
+                dsp(i,:)      - nodal displacement functions of node i
                 strnNode(:,i) - strains on the radial line of node i
                 GPxy(ie,:)    - coordinates of middle point of element ie
                 strnEle(:,ie) - strains at middle point of element ie
@@ -499,7 +499,7 @@ def displacementsAndStrainsOfSelement(xi, sdSln, sdStrnMode, sdIntgConst):
     else:  # at scaling centre
         dsp = np.matmul(sdSln['v'][:, -1:], sdIntgConst[-1:])  # Eq. (3.57)
         if np.min(np.real(sdSln['d'][0: -2])) > 0.999:
-            strnEle = np.matmul(sdStrnMode['value'][:, -5:-2], sdIntgConst[-5:-2])  # Eq. (3.64)
+            strnEle = np.matmul(sdStrnMode['value'][:, -6:-2], sdIntgConst[-6:-2])  # Eq. (3.64)
         else:  # stress singularity at scaling centre
             strnEle = np.array([float('nan')] * len(sdStrnMode['value']))
 
